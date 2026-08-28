@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Job Portal
 
-## Getting Started
+Next.js frontend and Spring Boot API from [FRONTEND.md](FRONTEND.md) and [BACKEND.md](BACKEND.md).
 
-First, run the development server:
+The database starts empty. Candidates and employers register through the UI. Admin accounts are not self-registered.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up -d postgres
+cd backend
+mvnw.cmd spring-boot:run
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+In another terminal:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open http://localhost:3000. Optional first admin (created only if none exists):
 
-## Learn More
+```bash
+set ADMIN_EMAIL=you@example.com
+set ADMIN_PASSWORD=your-password
+set ADMIN_NAME=Your Name
+```
 
-To learn more about Next.js, take a look at the following resources:
+Set these before starting Spring Boot. `API_ORIGIN` defaults to `http://localhost:8080`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Optional Claude for resume analysis and ranked recommendations (set before starting Spring Boot):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+set ANTHROPIC_API_KEY=your-anthropic-key
+```
 
-## Deploy on Vercel
+Without the key, analysis and recommendations stay on the local heuristic.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## AI
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Resume analysis and `POST /api/ai/jobs/recommend` use Claude when `ANTHROPIC_API_KEY` is set. Job-search match badges, per-job match, and interview questions stay heuristic decision support.
+
+```bash
+npm run lint
+npm run build
+```

@@ -1,0 +1,10 @@
+#!/bin/sh
+BASE="$(cd "$(dirname "$0")" && pwd)"
+JAR="$BASE/.mvn/wrapper/maven-wrapper.jar"
+PROPS="$BASE/.mvn/wrapper/maven-wrapper.properties"
+if [ ! -f "$JAR" ]; then
+  echo "Downloading Maven Wrapper..."
+  URL=$(grep wrapperUrl "$PROPS" | cut -d= -f2-)
+  curl -fsSL "$URL" -o "$JAR"
+fi
+exec java -jar "$JAR" "$@"

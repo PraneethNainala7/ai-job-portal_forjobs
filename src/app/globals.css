@@ -1,26 +1,233 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand: #0b1220;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --ai: #7c3aed;
+  --ai-blue: #2563eb;
+  --ai-surface: #f5f3ff;
+  --ai-border: #ddd6fe;
+  --canvas: #f8fafc;
+  --surface: #ffffff;
+  --muted: #f1f5f9;
+  --ink: #0f172a;
+  --ink-secondary: #64748b;
+  --ink-muted: #94a3b8;
+  --line: #e2e8f0;
+  --input: #cbd5e1;
+  --danger: #dc2626;
+  --success-bg: #dcfce7;
+  --success-fg: #166534;
+  --pending-bg: #fef3c7;
+  --pending-fg: #92400e;
+  --rejected-bg: #fee2e2;
+  --rejected-fg: #991b1b;
+  --hold-bg: #ffedd5;
+  --hold-fg: #9a3412;
+  --radius-control: 8px;
+  --radius-card: 16px;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05);
+  --shadow-card-hover: 0 10px 28px rgb(15 23 42 / 0.08);
+
+  --font-fallback: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-brand: var(--brand);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-light: var(--primary-light);
+  --color-ai: var(--ai);
+  --color-ai-blue: var(--ai-blue);
+  --color-ai-surface: var(--ai-surface);
+  --color-ai-border: var(--ai-border);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-input: var(--input);
+  --color-danger: var(--danger);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-pending-bg: var(--pending-bg);
+  --color-pending-fg: var(--pending-fg);
+  --color-rejected-bg: var(--rejected-bg);
+  --color-rejected-fg: var(--rejected-fg);
+  --color-hold-bg: var(--hold-bg);
+  --color-hold-fg: var(--hold-fg);
+  --font-sans: var(--font-geist-sans), var(--font-fallback);
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html,
+  body {
+    min-height: 100dvh;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-geist-sans), var(--font-fallback);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Never let the browser fake a weight the variable font can produce. */
+    font-synthesis-weight: none;
+  }
+
+  /* Optical tracking: type needs to tighten as it gets larger. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
+    letter-spacing: -0.019em;
+    text-wrap: balance;
+  }
+
+  h1 {
+    letter-spacing: -0.033em;
+  }
+
+  h2 {
+    letter-spacing: -0.026em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Figures must align in columns, not jitter per row. */
+  table,
+  time,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    border-color: var(--primary);
+  }
+
+  :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--primary) 35%, transparent);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes app-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer components {
+  .anime-loader {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .anime-loader--sm {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .anime-loader--md {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .anime-loader--lg {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .anime-loader__track {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    border: 2px solid var(--line);
+  }
+
+  .anime-loader--sm .anime-loader__track {
+    border-width: 2px;
+  }
+
+  .anime-loader--lg .anime-loader__track {
+    border-width: 3px;
+  }
+
+  .anime-loader__arc {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    border-top-color: var(--primary);
+    border-right-color: var(--ai);
+    animation: app-loader-spin 0.85s linear infinite;
+  }
+
+  .anime-loader--sm .anime-loader__arc {
+    border-width: 2px;
+  }
+
+  .anime-loader--lg .anime-loader__arc {
+    border-width: 3px;
+  }
+
+  .anime-loader__inner {
+    position: absolute;
+    inset: 22%;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    border-bottom-color: color-mix(in srgb, var(--ai) 55%, transparent);
+    border-left-color: color-mix(in srgb, var(--primary) 45%, transparent);
+    animation: app-loader-spin 1.2s linear infinite reverse;
+    opacity: 0.7;
+  }
+
+  .anime-loader--sm .anime-loader__inner {
+    inset: 24%;
+    border-width: 1.5px;
+  }
+
+  .anime-loader--lg .anime-loader__inner {
+    inset: 20%;
+    border-width: 2.5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .anime-loader__arc,
+  .anime-loader__inner {
+    animation: none !important;
+    opacity: 0.65;
+  }
 }
