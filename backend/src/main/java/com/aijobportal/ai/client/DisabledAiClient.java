@@ -52,6 +52,11 @@ public class DisabledAiClient implements AiClient {
                 List.of(),
                 List.of(),
                 List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
                 error
         );
         return new ResumeAnalysisOutcome(response, CandidateMapper.toParsedData(response));

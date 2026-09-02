@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm, type UseFormReturn } from "react-hook-form";
@@ -125,6 +126,11 @@ export function LoginForm() {
               error={errors.password?.message}
               {...form.register("password")}
             />
+            <div className="flex justify-end">
+              <Link href="/forgot-password" className="text-sm font-semibold text-primary">
+                Forgot password?
+              </Link>
+            </div>
             {errors.root?.message ? (
               <p role="alert" className="text-sm text-danger">
                 {errors.root.message}

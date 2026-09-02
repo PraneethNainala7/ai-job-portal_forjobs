@@ -53,9 +53,13 @@ export function JobForm({ job }: { job?: Job }) {
 
   const router = useRouter();
 
-  const [critical, setCritical] = useState(job?.criticalSkills?.length ? job.criticalSkills : (job?.skills ?? []));
-
+  const [required, setRequired] = useState(
+    job?.skills?.length ? job.skills : (job?.criticalSkills ?? []),
+  );
+  const [critical, setCritical] = useState(job?.criticalSkills ?? []);
   const [preferred, setPreferred] = useState(job?.preferredSkills ?? []);
+  const [educationRequirements, setEducationRequirements] = useState(job?.educationRequirements ?? []);
+  const [certificationRequirements, setCertificationRequirements] = useState(job?.certificationRequirements ?? []);
 
   const [error, setError] = useState("");
 
@@ -81,9 +85,9 @@ export function JobForm({ job }: { job?: Job }) {
 
         event.preventDefault();
 
-        if (critical.length === 0) {
+        if (required.length === 0 && critical.length === 0) {
 
-          setError("Add at least one critical skill.");
+          setError("Add at least one required skill.");
 
           return;
 
@@ -109,11 +113,15 @@ export function JobForm({ job }: { job?: Job }) {
 
           description: String(form.get("description") ?? ""),
 
-          skills: [],
+          skills: required,
 
           criticalSkills: critical,
 
           preferredSkills: preferred,
+
+          educationRequirements,
+
+          certificationRequirements,
 
         });
 
@@ -162,11 +170,22 @@ export function JobForm({ job }: { job?: Job }) {
       </div>
 
       <ChipInput
-        label="Critical skills"
+        label="Required skills"
         hint="Must-have skills for this role. Paste a list (one per line or comma-separated), pick from suggestions, or type and press Enter."
+        values={required}
+        onChange={setRequired}
+        suggestions={SKILL_SUGGESTIONS}
+        addLabel="Add skill"
+      />
+
+      <ChipInput
+        label="Critical skills (must-have)"
+        hint="Optional subset of required skills. Missing all critical skills caps the match score."
         values={critical}
         onChange={setCritical}
-        suggestions={SKILL_SUGGESTIONS}
+        suggestions={SKILL_SUGGESTIONS.filter(
+          (skill) => required.some((item) => item.toLowerCase() === skill.toLowerCase()),
+        )}
         addLabel="Add skill"
       />
 
@@ -176,9 +195,25 @@ export function JobForm({ job }: { job?: Job }) {
         values={preferred}
         onChange={setPreferred}
         suggestions={SKILL_SUGGESTIONS.filter(
-          (skill) => !critical.some((item) => item.toLowerCase() === skill.toLowerCase()),
+          (skill) => !required.some((item) => item.toLowerCase() === skill.toLowerCase()),
         )}
         addLabel="Add skill"
+      />
+
+      <ChipInput
+        label="Education requirements"
+        hint="Optional degrees or qualifications used in match scoring."
+        values={educationRequirements}
+        onChange={setEducationRequirements}
+        addLabel="Add requirement"
+      />
+
+      <ChipInput
+        label="Certification requirements"
+        hint="Optional certifications used in match scoring."
+        values={certificationRequirements}
+        onChange={setCertificationRequirements}
+        addLabel="Add requirement"
       />
 
       <TextAreaField

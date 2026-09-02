@@ -46,7 +46,8 @@ class DisabledAiClientTest {
                 new com.aijobportal.candidate.dto.ResumeAnalysisResponse(
                         "PROCESSING", "resume.pdf", "2026-01-01T00:00:00Z",
                         List.of(), List.of(), null, List.of(), List.of(), List.of(),
-                        null, List.of(), List.of(), List.of(), null
+                        null, List.of(), List.of(), List.of(),
+                        List.of(), List.of(), List.of(), List.of(), List.of(), null
                 ),
                 "Sample resume text"
         );

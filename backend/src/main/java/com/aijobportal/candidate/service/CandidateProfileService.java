@@ -161,6 +161,48 @@ public class CandidateProfileService {
         return CandidateMapper.withResumeSkills(CandidateMapper.toProfile(profile), resume);
     }
 
+    @Transactional
+    public void prefillFromResumeAnalysis(
+            AuthPrincipal principal,
+            ResumeAnalysisResponse analysis
+    ) {
+        if (analysis == null || !ResumeStatus.COMPLETE.name().equals(analysis.status())) {
+            return;
+        }
+        CandidateProfile profile = requireProfile(principal);
+        if (isBlank(profile.getTitle()) && analysis.titles() != null) {
+            for (String title : analysis.titles()) {
+                if (title != null && !title.isBlank()) {
+                    profile.setTitle(title.trim());
+                    break;
+                }
+            }
+        }
+        if (isBlank(profile.getExperience()) && analysis.experience() != null && !analysis.experience().isBlank()) {
+            profile.setExperience(analysis.experience().trim());
+        }
+        if (isEmpty(profile.getEducation()) && analysis.education() != null && !analysis.education().isEmpty()) {
+            profile.setEducation(Lists.copy(analysis.education().stream()
+                    .filter(item -> item != null && !item.isBlank())
+                    .map(String::trim)
+                    .toList()));
+        }
+        if (isEmpty(profile.getCertifications()) && analysis.certifications() != null && !analysis.certifications().isEmpty()) {
+            profile.setCertifications(Lists.copy(analysis.certifications().stream()
+                    .filter(item -> item != null && !item.isBlank())
+                    .map(String::trim)
+                    .toList()));
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static boolean isEmpty(List<String> values) {
+        return values == null || values.isEmpty();
+    }
+
     private static String trim(String value) {
         return value == null ? null : value.trim();
     }

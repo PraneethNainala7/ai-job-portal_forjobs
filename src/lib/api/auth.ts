@@ -71,3 +71,17 @@ export function logoutRequest() {
 export function sessionRequest() {
   return request<{ user: SessionUser | null }>("/api/auth/session");
 }
+
+export function forgotPasswordRequest(email: string) {
+  return request<{ ok: true }>("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPasswordRequest(token: string, password: string) {
+  return request<{ ok: true }>("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+}

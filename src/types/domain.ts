@@ -52,6 +52,8 @@ export interface Job {
   skills: string[];
   criticalSkills?: string[];
   preferredSkills?: string[];
+  educationRequirements?: string[];
+  certificationRequirements?: string[];
   location: string;
   salary: string;
   jobType: string;
@@ -87,6 +89,25 @@ export interface SkillMatchDetail {
   matchType: "EXACT_MATCH" | "RELATED_MATCH" | "TRANSFERABLE_MATCH" | "NO_MATCH";
 }
 
+export type DimensionStatus = "APPLICABLE" | "NOT_APPLICABLE";
+
+export interface DimensionScore {
+  earnedPoints: number | null;
+  maxPoints: number;
+  status: DimensionStatus;
+}
+
+export interface ScoreBreakdownDetail {
+  requiredSkills: DimensionScore;
+  preferredSkills: DimensionScore;
+  experience: DimensionScore;
+  roleRelevance: DimensionScore;
+  education: DimensionScore;
+  totalEarnedPoints: number;
+  applicableMaximumPoints: number;
+  finalCalculation?: string | null;
+}
+
 export interface ScoreBreakdownV2 {
   criticalRequiredSkills: number;
   requiredSkills: number;
@@ -115,6 +136,11 @@ export interface MatchResult {
   scoreCapApplied?: boolean;
   scoreCapReason?: string | null;
   scoreBreakdownV2?: ScoreBreakdownV2;
+  scoreBreakdownDetail?: ScoreBreakdownDetail;
+  totalEarnedPoints?: number;
+  applicableMaximumPoints?: number;
+  scoreReliable?: boolean;
+  scoreUnreliableReason?: string | null;
 }
 
 export interface RecommendationResponse {
@@ -172,6 +198,11 @@ export interface ResumeAnalysis {
   technologies?: string[];
   projects?: string[];
   industries?: string[];
+  programmingLanguages?: string[];
+  frameworks?: string[];
+  databases?: string[];
+  cloudTechnologies?: string[];
+  tools?: string[];
   error?: string;
 }
 

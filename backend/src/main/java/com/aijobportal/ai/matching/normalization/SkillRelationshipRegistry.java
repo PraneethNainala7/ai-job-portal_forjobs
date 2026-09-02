@@ -8,9 +8,11 @@ import org.yaml.snakeyaml.Yaml;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 public class SkillRelationshipRegistry {
@@ -75,6 +77,23 @@ public class SkillRelationshipRegistry {
             }
         }
         return null;
+    }
+
+    public Set<String> knownSkillLabels() {
+        Set<String> labels = new LinkedHashSet<>();
+        for (RelationshipRule rule : related) {
+            labels.add(rule.job());
+            labels.add(rule.candidate());
+        }
+        for (RelationshipRule rule : transferable) {
+            labels.add(rule.job());
+            labels.add(rule.candidate());
+        }
+        for (PairRule rule : notRelated) {
+            labels.add(rule.job());
+            labels.add(rule.candidate());
+        }
+        return labels;
     }
 
     private List<RelationshipRule> parseRules(Object value) {

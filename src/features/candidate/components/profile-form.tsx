@@ -61,6 +61,9 @@ export function ProfileForm() {
       </section>
       <section className="grid gap-5 md:grid-cols-2">
         <h2 className="text-lg font-semibold md:col-span-2">Professional information</h2>
+        <p className="text-sm text-ink-secondary md:col-span-2">
+          Resume analysis pre-fills empty title, experience, education, and certifications. Review and save here.
+        </p>
         <TextField name="title" label="Professional title" defaultValue={data.title} />
         <TextField name="experience" label="Experience" placeholder="4 years" defaultValue={data.experience} />
         <TextField

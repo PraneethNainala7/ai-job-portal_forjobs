@@ -4,6 +4,7 @@ import com.aijobportal.ai.dto.InterviewQuestionsResponse;
 import com.aijobportal.candidate.dto.CandidateProfileResponse;
 import com.aijobportal.candidate.dto.ResumeAnalysisResponse;
 import com.aijobportal.candidate.mapper.CandidateMapper;
+import com.aijobportal.candidate.service.ResumeSkillBucketNormalizer;
 import com.aijobportal.common.domain.ResumeStatus;
 import com.aijobportal.job.entity.Job;
 import com.anthropic.client.AnthropicClient;
@@ -76,7 +77,7 @@ public class ClaudeAiClient implements AiClient {
                 "Resume text:\n" + resumeText
         );
         JsonNode root = readJson(objectMapper, raw);
-        ResumeAnalysisResponse response = parseAnalysis(root, current);
+        ResumeAnalysisResponse response = ResumeSkillBucketNormalizer.normalize(parseAnalysis(root, current));
         return new ResumeAnalysisOutcome(response, parsedData(root, response));
     }
 
@@ -104,17 +105,17 @@ public class ClaudeAiClient implements AiClient {
                 strings(root, "technologies"),
                 strings(root, "projects"),
                 strings(root, "industries"),
+                strings(root, "programmingLanguages"),
+                strings(root, "frameworks"),
+                strings(root, "databases"),
+                strings(root, "cloudTechnologies"),
+                strings(root, "tools"),
                 null
         );
     }
 
     static Map<String, Object> parsedData(JsonNode root, ResumeAnalysisResponse response) {
         Map<String, Object> data = new LinkedHashMap<>(CandidateMapper.toParsedData(response));
-        data.put("programmingLanguages", strings(root, "programmingLanguages"));
-        data.put("frameworks", strings(root, "frameworks"));
-        data.put("databases", strings(root, "databases"));
-        data.put("cloudTechnologies", strings(root, "cloudTechnologies"));
-        data.put("tools", strings(root, "tools"));
         data.put("experienceYears", experienceYears(root));
         return data;
     }

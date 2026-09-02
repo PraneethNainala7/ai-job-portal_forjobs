@@ -45,7 +45,7 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
           <p className="mt-3 text-sm leading-7 text-ink-secondary">{job.description}</p>
           {primarySkills.length ? (
             <>
-              <h2 className="mt-8 text-xl font-semibold">Skills</h2>
+              <h2 className="mt-8 text-xl font-semibold">Required skills</h2>
               <SkillList skills={primarySkills} />
             </>
           ) : null}
@@ -53,6 +53,18 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
             <>
               <h2 className="mt-8 text-xl font-semibold">Preferred skills</h2>
               <SkillList skills={job.preferredSkills} />
+            </>
+          ) : null}
+          {job.educationRequirements?.length ? (
+            <>
+              <h2 className="mt-8 text-xl font-semibold">Education requirements</h2>
+              <SkillList skills={job.educationRequirements} />
+            </>
+          ) : null}
+          {job.certificationRequirements?.length ? (
+            <>
+              <h2 className="mt-8 text-xl font-semibold">Certification requirements</h2>
+              <SkillList skills={job.certificationRequirements} />
             </>
           ) : null}
         </div>

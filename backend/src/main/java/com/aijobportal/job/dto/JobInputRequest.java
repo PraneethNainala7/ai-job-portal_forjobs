@@ -1,7 +1,6 @@
 package com.aijobportal.job.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
@@ -13,9 +12,10 @@ public record JobInputRequest(
         @NotBlank(message = "Experience is required.")
         String experience,
         List<String> skills,
-        @NotEmpty(message = "Add at least one critical skill.")
-        List<@NotBlank(message = "Add at least one critical skill.") String> criticalSkills,
+        List<String> criticalSkills,
         List<String> preferredSkills,
+        List<String> educationRequirements,
+        List<String> certificationRequirements,
         @NotBlank(message = "Location is required.")
         String location,
         @NotBlank(message = "Salary is required.")

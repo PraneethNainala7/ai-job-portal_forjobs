@@ -8,8 +8,10 @@ import com.aijobportal.ai.matching.normalization.SkillNormalizationService;
 import com.aijobportal.ai.matching.normalization.SkillRelationshipRegistry;
 import com.aijobportal.ai.matching.policy.MatchScorePolicy;
 import com.aijobportal.ai.matching.role.RoleMatchingService;
+import com.aijobportal.ai.matching.scoring.DimensionStatus;
 import com.aijobportal.ai.matching.scoring.MatchAnalysisResult;
 import com.aijobportal.ai.matching.scoring.MatchScoringService;
+import com.aijobportal.ai.matching.skill.JobDescriptionSkillExtractor;
 import com.aijobportal.ai.matching.skill.MatchType;
 import com.aijobportal.ai.matching.skill.SkillMatchingService;
 import com.aijobportal.common.domain.JobStatus;
@@ -62,12 +64,17 @@ class MatchScoringServiceTest {
                 registry,
                 policy
         );
+        JobDescriptionSkillExtractor descriptionSkillExtractor = new JobDescriptionSkillExtractor(
+                normalizationService,
+                registry
+        );
         scoringService = new MatchScoringService(
                 policy,
                 skillMatchingService,
                 new ExperienceMatchingService(policy),
                 new RoleMatchingService(policy),
-                new EducationMatchingService(policy)
+                new EducationMatchingService(policy),
+                descriptionSkillExtractor
         );
     }
 
@@ -124,7 +131,7 @@ class MatchScoringServiceTest {
         );
 
         MatchAnalysisResult result = scoringService.score(candidate, job);
-        assertTrue(result.totalScore() >= 20 && result.totalScore() <= 55,
+        assertTrue(result.totalScore() >= 20 && result.totalScore() <= 65,
                 "Expected partial score, got " + result.totalScore());
         assertTrue(result.requiredMatches().stream().anyMatch(d -> d.jobSkill().equalsIgnoreCase("Java")
                 && d.matchType() == MatchType.EXACT_MATCH));
@@ -195,6 +202,112 @@ class MatchScoringServiceTest {
         }
     }
 
+    @Test
+    void requiredOnlySkillsDoNotApplyCriticalCapWhenPartialMatchExists() {
+        NormalizedCandidateProfile candidate = profile(
+                "Java Developer",
+                "5 years",
+                List.of("Java", "SQL")
+        );
+        NormalizedJobRequirements job = requirements(
+                "Java Developer",
+                List.of(),
+                List.of("Java", "Spring Boot", "Hibernate"),
+                List.of()
+        );
+
+        MatchAnalysisResult result = scoringService.score(candidate, job);
+        assertTrue(result.totalScore() > 30, "Expected no zero-critical cap, got " + result.totalScore());
+        assertFalse(result.scoreCapApplied());
+    }
+
+    @Test
+    void preferredSkillsNotApplicableAreExcludedFromDenominator() {
+        NormalizedCandidateProfile candidate = profile(
+                "Java Developer",
+                "5 years",
+                List.of("Java", "Spring Boot", "SQL")
+        );
+        NormalizedJobRequirements job = requirements(
+                "Java Developer",
+                List.of(),
+                List.of("Java", "Spring Boot"),
+                List.of(),
+                "3+ years",
+                "Build backend services with Java and Spring Boot."
+        );
+
+        MatchAnalysisResult result = scoringService.score(candidate, job);
+        assertEquals(DimensionStatus.NOT_APPLICABLE, result.scoredBreakdown().preferredSkills().status());
+        assertTrue(result.applicableMaximumPoints() < 100);
+        assertTrue(result.totalScore() >= 75);
+    }
+
+    @Test
+    void preferredSkillsApplicableWithNoMatchScoresZeroInDenominator() {
+        NormalizedCandidateProfile candidate = profile(
+                "Java Developer",
+                "5 years",
+                List.of("Java", "Spring Boot")
+        );
+        NormalizedJobRequirements job = requirements(
+                "Java Developer",
+                List.of(),
+                List.of("Java", "Spring Boot"),
+                List.of("Docker", "AWS"),
+                "3+ years",
+                "Build backend services with Java and Spring Boot."
+        );
+
+        MatchAnalysisResult result = scoringService.score(candidate, job);
+        assertEquals(DimensionStatus.APPLICABLE, result.scoredBreakdown().preferredSkills().status());
+        assertEquals(0, result.scoredBreakdown().preferredSkills().earnedOrZero());
+        assertEquals(15, result.scoredBreakdown().preferredSkills().maxPoints());
+    }
+
+    @Test
+    void experienceNotApplicableWhenRequirementMissing() {
+        NormalizedCandidateProfile candidate = profile(
+                "Java Developer",
+                "5 years",
+                List.of("Java")
+        );
+        NormalizedJobRequirements job = requirements(
+                "Java Developer",
+                List.of(),
+                List.of("Java"),
+                List.of(),
+                "",
+                "Java backend role."
+        );
+
+        MatchAnalysisResult result = scoringService.score(candidate, job);
+        assertEquals(DimensionStatus.NOT_APPLICABLE, result.scoredBreakdown().experience().status());
+    }
+
+    @Test
+    void noApplicableDimensionsReturnsUnreliableScore() {
+        Job job = new Job();
+        job.setId("job-empty");
+        job.setRole("");
+        job.setCriticalSkills(List.of());
+        job.setSkills(List.of());
+        job.setPreferredSkills(List.of());
+        job.setExperience("");
+        job.setDescription("General hiring.");
+        job.setLocation("Remote");
+        job.setStatus(JobStatus.ACTIVE);
+
+        MatchAnalysisResult result = scoringService.score(
+                profile("Developer", "3 years", List.of("Java")),
+                NormalizedJobRequirements.from(job)
+        );
+
+        assertFalse(result.scoreReliable());
+        assertEquals(0, result.totalScore());
+        assertEquals(0, result.applicableMaximumPoints());
+    }
+
     private static NormalizedCandidateProfile profile(String title, String experience, List<String> skills) {
         return new NormalizedCandidateProfile(
                 "candidate-1",
@@ -212,7 +325,9 @@ class MatchScoringServiceTest {
             String role,
             List<String> critical,
             List<String> required,
-            List<String> preferred
+            List<String> preferred,
+            String experience,
+            String description
     ) {
         Job job = new Job();
         job.setId("job-1");
@@ -220,10 +335,20 @@ class MatchScoringServiceTest {
         job.setCriticalSkills(critical);
         job.setSkills(required);
         job.setPreferredSkills(preferred);
-        job.setExperience("3+ years");
+        job.setExperience(experience);
         job.setLocation("Remote");
-        job.setDescription("Build backend services with Java and Spring Boot.");
+        job.setDescription(description);
         job.setStatus(JobStatus.ACTIVE);
         return NormalizedJobRequirements.from(job);
+    }
+
+    private static NormalizedJobRequirements requirements(
+            String role,
+            List<String> critical,
+            List<String> required,
+            List<String> preferred
+    ) {
+        return requirements(role, critical, required, preferred, "3+ years",
+                "Build backend services with Java and Spring Boot.");
     }
 }

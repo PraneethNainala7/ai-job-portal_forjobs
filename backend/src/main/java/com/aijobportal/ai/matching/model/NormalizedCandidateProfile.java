@@ -45,11 +45,11 @@ public record NormalizedCandidateProfile(
         Map<String, Integer> experienceByDomain = parseExperienceByDomain(resume);
         return new NormalizedCandidateProfile(
                 merged.id(),
-                merged.title(),
-                merged.experience(),
+                CandidateScoringDataMerger.mergeTitle(merged, analysis),
+                CandidateScoringDataMerger.mergeExperience(merged, analysis),
                 normalizationService.dedupe(allSkills),
-                merged.education() == null ? List.of() : merged.education(),
-                merged.certifications() == null ? List.of() : merged.certifications(),
+                CandidateScoringDataMerger.mergeEducation(merged, analysis),
+                CandidateScoringDataMerger.mergeCertifications(merged, analysis),
                 titles,
                 experienceByDomain
         );

@@ -119,10 +119,10 @@ public class JobCommandService {
         List<String> critical = normalizeTier(input.criticalSkills());
         List<String> required = normalizeTier(input.skills());
         List<String> preferred = normalizeTier(input.preferredSkills());
-        if (critical.isEmpty()) {
-            throw ApiException.badRequest("Add at least one critical skill.");
+        if (critical.isEmpty() && required.isEmpty()) {
+            throw ApiException.badRequest("Add at least one required skill.");
         }
-        validateNoOverlap(critical, required, preferred);
+        validateSkillTiers(critical, required, preferred);
 
         job.setRole(input.role().trim());
         job.setExperience(input.experience().trim());
@@ -134,6 +134,8 @@ public class JobCommandService {
         job.setJobType(input.jobType().trim());
         job.setWorkMode(blankToNull(input.workMode()));
         job.setDescription(input.description().trim());
+        job.setEducationRequirements(normalizeTier(input.educationRequirements()));
+        job.setCertificationRequirements(normalizeTier(input.certificationRequirements()));
     }
 
     private List<String> normalizeTier(List<String> values) {
@@ -155,19 +157,42 @@ public class JobCommandService {
         return normalized;
     }
 
-    private void validateNoOverlap(List<String> critical, List<String> required, List<String> preferred) {
-        Set<String> seen = new LinkedHashSet<>();
-        assertUniqueTier(seen, critical, "critical");
-        assertUniqueTier(seen, required, "required");
-        assertUniqueTier(seen, preferred, "preferred");
+    private void validateSkillTiers(List<String> critical, List<String> required, List<String> preferred) {
+        assertNoOverlap(required, preferred, "required", "preferred");
+        assertNoOverlap(critical, preferred, "critical", "preferred");
+        assertSubset(critical, required);
     }
 
-    private void assertUniqueTier(Set<String> seen, List<String> tier, String tierName) {
-        for (String skill : tier) {
+    private void assertSubset(List<String> subset, List<String> superset) {
+        if (subset.isEmpty() || superset.isEmpty()) {
+            return;
+        }
+        Set<String> allowed = new LinkedHashSet<>();
+        for (String skill : superset) {
+            allowed.add(normalizationService.normalizeKey(skill));
+        }
+        for (String skill : subset) {
             String key = normalizationService.normalizeKey(skill);
-            if (!seen.add(key)) {
-                throw ApiException.badRequest("Skill '" + skill + "' appears in more than one tier. "
-                        + "Each skill must belong to only one of critical or preferred.");
+            if (!allowed.contains(key)) {
+                throw ApiException.badRequest("Critical skill '" + skill
+                        + "' must also appear in required skills.");
+            }
+        }
+    }
+
+    private void assertNoOverlap(List<String> left, List<String> right, String leftName, String rightName) {
+        if (left.isEmpty() || right.isEmpty()) {
+            return;
+        }
+        Set<String> seen = new LinkedHashSet<>();
+        for (String skill : left) {
+            seen.add(normalizationService.normalizeKey(skill));
+        }
+        for (String skill : right) {
+            String key = normalizationService.normalizeKey(skill);
+            if (seen.contains(key)) {
+                throw ApiException.badRequest("Skill '" + skill + "' appears in both "
+                        + leftName + " and " + rightName + " tiers.");
             }
         }
     }

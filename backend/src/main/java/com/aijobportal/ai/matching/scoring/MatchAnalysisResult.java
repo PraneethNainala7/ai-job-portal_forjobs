@@ -7,10 +7,15 @@ import java.util.List;
 public record MatchAnalysisResult(
         int totalScore,
         ScoreBreakdown scoreBreakdown,
+        ScoredBreakdown scoredBreakdown,
         List<SkillMatchDetail> criticalMatches,
         List<SkillMatchDetail> requiredMatches,
         List<SkillMatchDetail> preferredMatches,
         boolean scoreCapApplied,
-        String scoreCapReason
+        String scoreCapReason,
+        boolean scoreReliable,
+        String scoreUnreliableReason,
+        int totalEarnedPoints,
+        int applicableMaximumPoints
 ) {
 }

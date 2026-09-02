@@ -17,7 +17,8 @@ class ClaudeAiClientTest {
         ResumeAnalysisResponse current = new ResumeAnalysisResponse(
                 "PROCESSING", "resume.pdf", "2026-01-01T00:00:00Z",
                 List.of(), List.of(), null, List.of(), List.of(), List.of(),
-                null, List.of(), List.of(), List.of(), null
+                null, List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of(), List.of(), List.of(), null
         );
         String raw = """
                 ```json
@@ -31,7 +32,10 @@ class ClaudeAiClientTest {
                   "seniority": "Mid-level",
                   "technologies": ["PostgreSQL"],
                   "projects": ["Job portal"],
-                  "industries": ["Technology"]
+                  "industries": ["Technology"],
+                  "programmingLanguages": ["JavaScript (ES6+)"],
+                  "frameworks": ["Spring Boot"],
+                  "tools": ["Git", "Postman"]
                 }
                 ```
                 """;
@@ -41,5 +45,7 @@ class ClaudeAiClientTest {
         assertEquals(List.of("Java", "Spring"), result.skills());
         assertEquals("4 years", result.experience());
         assertEquals(List.of("PostgreSQL"), result.technologies());
+        assertEquals(List.of("JavaScript (ES6+)"), result.programmingLanguages());
+        assertEquals(List.of("Git", "Postman"), result.tools());
     }
 }

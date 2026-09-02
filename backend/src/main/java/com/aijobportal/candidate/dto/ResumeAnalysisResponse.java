@@ -19,6 +19,11 @@ public record ResumeAnalysisResponse(
         List<String> technologies,
         List<String> projects,
         List<String> industries,
+        List<String> programmingLanguages,
+        List<String> frameworks,
+        List<String> databases,
+        List<String> cloudTechnologies,
+        List<String> tools,
         String error
 ) {
 }

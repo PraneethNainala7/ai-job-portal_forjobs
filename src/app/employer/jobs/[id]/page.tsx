@@ -28,11 +28,16 @@ export default async function EmployerJobDetailPage({
       <article className="rounded-[var(--radius-card)] border bg-surface p-6">
         <p className="text-sm text-ink-secondary">{job.applicantCount} applicants · {job.shortlistedCount} shortlisted or in interview</p>
         <p className="mt-4 text-sm leading-7 text-ink-secondary">{job.description}</p>
-        <ul className="mt-6 flex flex-wrap gap-2">
-          {primarySkills.map((skill) => (
-            <li key={skill} className="rounded-full bg-muted px-3 py-1.5 text-sm">{skill}</li>
-          ))}
-        </ul>
+        {primarySkills.length ? (
+          <>
+            <p className="mt-6 text-sm font-medium text-ink">Required skills</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {primarySkills.map((skill) => (
+                <li key={skill} className="rounded-full bg-muted px-3 py-1.5 text-sm">{skill}</li>
+              ))}
+            </ul>
+          </>
+        ) : null}
         {job.preferredSkills?.length ? (
           <>
             <p className="mt-4 text-sm font-medium text-ink">Preferred skills</p>

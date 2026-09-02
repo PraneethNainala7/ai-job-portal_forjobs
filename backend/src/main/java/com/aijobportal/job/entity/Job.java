@@ -70,6 +70,14 @@ public class Job {
     @Column(nullable = false)
     private String description;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "education_requirements", nullable = false)
+    private List<String> educationRequirements = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "certification_requirements", nullable = false)
+    private List<String> certificationRequirements = new ArrayList<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private JobStatus status;
@@ -208,6 +216,22 @@ public class Job {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public List<String> getEducationRequirements() {
+        return educationRequirements;
+    }
+
+    public void setEducationRequirements(List<String> educationRequirements) {
+        this.educationRequirements = educationRequirements;
+    }
+
+    public List<String> getCertificationRequirements() {
+        return certificationRequirements;
+    }
+
+    public void setCertificationRequirements(List<String> certificationRequirements) {
+        this.certificationRequirements = certificationRequirements;
     }
 
     public JobStatus getStatus() {

@@ -1,4 +1,4 @@
-import type { MatchResult, ScoreBreakdownV2, SkillMatchDetail } from "@/types/domain";
+import type { DimensionScore, MatchResult, ScoreBreakdownDetail, ScoreBreakdownV2, SkillMatchDetail } from "@/types/domain";
 import { ReadMoreList, ReadMoreText } from "@/components/ui/read-more";
 
 function SkillList({
@@ -27,11 +27,26 @@ function SkillList({
   );
 }
 
-function BreakdownRow({ label, value }: { label: string; value: number }) {
+function BreakdownRow({
+  label,
+  dimension,
+}: {
+  label: string;
+  dimension?: DimensionScore;
+}) {
+  if (!dimension) {
+    return null;
+  }
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span className="text-ink-secondary">{label}</span>
-      <span className="font-mono tabular-nums text-ink">{value}</span>
+      {dimension.status === "NOT_APPLICABLE" ? (
+        <span className="text-xs text-ink-muted">Not specified by employer</span>
+      ) : (
+        <span className="font-mono tabular-nums text-ink">
+          {dimension.earnedPoints ?? 0} / {dimension.maxPoints}
+        </span>
+      )}
     </div>
   );
 }
@@ -71,36 +86,115 @@ function SkillMatchList({ title, items }: { title: string; items?: SkillMatchDet
   );
 }
 
-function BreakdownPanel({ breakdown }: { breakdown: ScoreBreakdownV2 }) {
+function mergeMissingRequiredSkills(match: MatchResult): string[] {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  for (const skill of [
+    ...(match.missingCriticalSkills ?? []),
+    ...(match.missingRequiredSkills ?? []),
+    ...(match.gaps ?? []),
+  ]) {
+    const key = skill.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(skill);
+  }
+  return merged;
+}
+
+function BreakdownDetailPanel({ breakdown }: { breakdown: ScoreBreakdownDetail }) {
   return (
     <div className="mt-4 space-y-2 rounded-[var(--radius-control)] border border-ai-border/60 bg-muted/20 p-3">
       <h3 className="text-sm font-semibold">Score breakdown</h3>
-      <BreakdownRow label="Critical skills" value={breakdown.criticalRequiredSkills} />
-      <BreakdownRow label="Required skills" value={breakdown.requiredSkills} />
-      <BreakdownRow label="Preferred skills" value={breakdown.preferredSkills} />
-      <BreakdownRow label="Relevant experience" value={breakdown.relevantExperience} />
-      <BreakdownRow label="Role relevance" value={breakdown.roleRelevance} />
-      <BreakdownRow label="Education / certifications" value={breakdown.educationAndCertifications} />
+      <p className="text-xs text-ink-secondary">
+        Related and transferable skill matches count toward applicable dimensions. Unspecified employer requirements are excluded from the total.
+      </p>
+      <BreakdownRow label="Required skills" dimension={breakdown.requiredSkills} />
+      <BreakdownRow label="Preferred skills" dimension={breakdown.preferredSkills} />
+      <BreakdownRow label="Relevant experience" dimension={breakdown.experience} />
+      <BreakdownRow label="Role relevance" dimension={breakdown.roleRelevance} />
+      <BreakdownRow label="Education / certifications" dimension={breakdown.education} />
+      {breakdown.finalCalculation ? (
+        <p className="pt-1 text-xs text-ink-muted">
+          Normalized score: {breakdown.finalCalculation}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function LegacyBreakdownPanel({ breakdown }: { breakdown: ScoreBreakdownV2 }) {
+  return (
+    <div className="mt-4 space-y-2 rounded-[var(--radius-control)] border border-ai-border/60 bg-muted/20 p-3">
+      <h3 className="text-sm font-semibold">Score breakdown</h3>
+      <p className="text-xs text-ink-secondary">Related and transferable skill matches also count toward the totals below.</p>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-ink-secondary">Required skills</span>
+        <span className="font-mono tabular-nums text-ink">
+          {breakdown.criticalRequiredSkills + breakdown.requiredSkills}
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-ink-secondary">Preferred skills</span>
+        <span className="font-mono tabular-nums text-ink">{breakdown.preferredSkills}</span>
+      </div>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-ink-secondary">Relevant experience</span>
+        <span className="font-mono tabular-nums text-ink">{breakdown.relevantExperience}</span>
+      </div>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-ink-secondary">Role relevance</span>
+        <span className="font-mono tabular-nums text-ink">{breakdown.roleRelevance}</span>
+      </div>
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="text-ink-secondary">Education / certifications</span>
+        <span className="font-mono tabular-nums text-ink">{breakdown.educationAndCertifications}</span>
+      </div>
     </div>
   );
 }
 
 export function MatchBreakdownPanel({ match }: { match: MatchResult }) {
+  const breakdownDetail = match.scoreBreakdownDetail;
   const breakdownV2 = match.scoreBreakdownV2;
   const legacyBreakdown = match.scoreBreakdown;
+  const missingRequiredSkills = mergeMissingRequiredSkills(match);
 
   return (
     <>
-      {breakdownV2 ? (
-        <BreakdownPanel breakdown={breakdownV2} />
+      {breakdownDetail ? (
+        <BreakdownDetailPanel breakdown={breakdownDetail} />
+      ) : breakdownV2 ? (
+        <LegacyBreakdownPanel breakdown={breakdownV2} />
       ) : legacyBreakdown ? (
         <div className="mt-4 space-y-2 rounded-[var(--radius-control)] border border-ai-border/60 bg-muted/20 p-3">
           <h3 className="text-sm font-semibold">Score breakdown</h3>
-          <BreakdownRow label="Required skills" value={legacyBreakdown.requiredSkills} />
-          <BreakdownRow label="Preferred skills" value={legacyBreakdown.preferredSkills} />
-          <BreakdownRow label="Experience" value={legacyBreakdown.experience} />
-          <BreakdownRow label="Role relevance" value={legacyBreakdown.roleRelevance} />
-          <BreakdownRow label="Education / certifications" value={legacyBreakdown.education} />
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-ink-secondary">Required skills</span>
+            <span className="font-mono tabular-nums text-ink">{legacyBreakdown.requiredSkills}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-ink-secondary">Preferred skills</span>
+            <span className="font-mono tabular-nums text-ink">{legacyBreakdown.preferredSkills}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-ink-secondary">Experience</span>
+            <span className="font-mono tabular-nums text-ink">{legacyBreakdown.experience}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-ink-secondary">Role relevance</span>
+            <span className="font-mono tabular-nums text-ink">{legacyBreakdown.roleRelevance}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-ink-secondary">Education / certifications</span>
+            <span className="font-mono tabular-nums text-ink">{legacyBreakdown.education}</span>
+          </div>
+        </div>
+      ) : null}
+
+      {match.scoreReliable === false && match.scoreUnreliableReason ? (
+        <div className="mt-3 rounded-[var(--radius-control)] border border-warning/40 bg-warning/10 px-3 py-2">
+          <p className="text-sm text-ink-secondary">{match.scoreUnreliableReason}</p>
         </div>
       ) : null}
 
@@ -124,14 +218,8 @@ export function MatchBreakdownPanel({ match }: { match: MatchResult }) {
         emptyLabel="No transferable skills identified"
       />
       <SkillList
-        title="Missing critical skills"
-        items={match.missingCriticalSkills}
-        emptyLabel="No critical-skill gaps"
-        collapsible
-      />
-      <SkillList
         title="Missing required skills"
-        items={match.missingRequiredSkills ?? match.gaps}
+        items={missingRequiredSkills}
         emptyLabel="No required-skill gaps"
         collapsible
       />

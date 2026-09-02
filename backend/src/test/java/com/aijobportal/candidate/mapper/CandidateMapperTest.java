@@ -50,6 +50,11 @@ class CandidateMapperTest {
                 List.of("Communication", "Problem solving"),
                 List.of("Professional project history"),
                 List.of("Technology"),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
                 null
         )));
 
@@ -58,5 +63,25 @@ class CandidateMapperTest {
         assertEquals("FAILED", response.status());
         assertTrue(response.skills().isEmpty());
         assertTrue(response.error() != null && response.error().contains("outdated"));
+    }
+
+    @Test
+    void completeResumeExposesExtendedSkillBuckets() {
+        Resume resume = new Resume();
+        resume.setStatus(ResumeStatus.COMPLETE);
+        resume.setFileName("frontend.pdf");
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("skills", List.of("React.js", "Next.js"));
+        data.put("programmingLanguages", List.of("JavaScript (ES6+)"));
+        data.put("tools", List.of("Git", "Postman", "VS Code"));
+        data.put("experience", "3 years");
+        resume.setParsedData(data);
+
+        var response = CandidateMapper.toResume(resume);
+
+        assertEquals(List.of("JavaScript (ES6+)"), response.programmingLanguages());
+        assertEquals(List.of("Git", "Postman", "VS Code"), response.tools());
+        assertTrue(CandidateMapper.allExtractedSkills(response).contains("JavaScript (ES6+)"));
+        assertTrue(CandidateMapper.allExtractedSkills(response).contains("Git"));
     }
 }

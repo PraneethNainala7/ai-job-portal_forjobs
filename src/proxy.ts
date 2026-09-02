@@ -30,7 +30,7 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(employerRegisterStep2Path, request.url));
   }
 
-  if (session && (pathname === "/login" || pathname === "/register")) {
+  if (session && (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password" || pathname === "/reset-password")) {
     const needsEmployerCompanyStep = session.role === "EMPLOYER" && !session.cin;
     if (pathname === "/register" && needsEmployerCompanyStep) {
       if (request.nextUrl.searchParams.get("step") === "2") {
@@ -54,5 +54,5 @@ export function proxy(request: NextRequest) {
   return nextWithPathname(request, pathname);
 }
 export const config = {
-  matcher: ["/admin/:path*", "/candidate/:path*", "/employer/:path*", "/login", "/register"],
+  matcher: ["/admin/:path*", "/candidate/:path*", "/employer/:path*", "/login", "/register", "/forgot-password", "/reset-password"],
 };

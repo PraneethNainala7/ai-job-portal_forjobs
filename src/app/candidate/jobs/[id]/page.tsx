@@ -41,7 +41,7 @@ export default async function CandidateJobDetailPage({
           <p className="mt-3 text-sm leading-7 text-ink-secondary">{job.description}</p>
           {primarySkills.length ? (
             <>
-              <h2 className="mt-8 text-xl font-semibold">Skills</h2>
+              <h2 className="mt-8 text-xl font-semibold">Required skills</h2>
               <ul className="mt-3 flex flex-wrap gap-2">
                 {primarySkills.map((skill) => (
                   <li key={skill} className="rounded-full bg-muted px-3 py-1.5 text-sm">{skill}</li>
@@ -55,6 +55,26 @@ export default async function CandidateJobDetailPage({
               <ul className="mt-3 flex flex-wrap gap-2">
                 {job.preferredSkills.map((skill) => (
                   <li key={skill} className="rounded-full bg-muted px-3 py-1.5 text-sm">{skill}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {job.educationRequirements?.length ? (
+            <>
+              <h2 className="mt-8 text-xl font-semibold">Education requirements</h2>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {job.educationRequirements.map((item) => (
+                  <li key={item} className="rounded-full bg-muted px-3 py-1.5 text-sm">{item}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {job.certificationRequirements?.length ? (
+            <>
+              <h2 className="mt-8 text-xl font-semibold">Certification requirements</h2>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {job.certificationRequirements.map((item) => (
+                  <li key={item} className="rounded-full bg-muted px-3 py-1.5 text-sm">{item}</li>
                 ))}
               </ul>
             </>

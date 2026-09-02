@@ -117,6 +117,7 @@ public class AiService {
             aiUsageService.increment("failures");
         } else {
             aiUsageService.increment("resumeAnalysis");
+            candidateProfileService.prefillFromResumeAnalysis(principal, result);
         }
         return result;
     }

@@ -1,11 +1,13 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AiPanel } from "@/components/ai/ai-panel";
 import { AiLoadingContent } from "@/components/ui/loading-panel";
-import { labelClass } from "@/components/ui/control-styles";
+import { chipClass, labelClass } from "@/components/ui/control-styles";
 import { analyzeResumeRequest, getResumeRequest, uploadResumeRequest } from "@/lib/api/candidate";
+import { allResumeSkills } from "@/lib/resume-skills";
+import type { ResumeAnalysis } from "@/types/domain";
 
 export function ResumePanel() {
   const queryClient = useQueryClient();
@@ -20,6 +22,7 @@ export function ResumePanel() {
     }
     void queryClient.invalidateQueries({ queryKey: ["resume"] });
     void queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+    void queryClient.invalidateQueries({ queryKey: ["profile"] });
   };
 
   const mutation = useMutation({
@@ -126,11 +129,20 @@ export function ResumePanel() {
       {resume?.status === "COMPLETE" ? (
         <AiPanel label="AI profile">
           <p className="mt-2 text-sm text-ink-secondary">Extracted from your resume as decision-support information, separate from the original file.</p>
+          <p className="mt-2 text-sm text-ink-secondary">
+            Empty profile fields (title, experience, education, certifications) are pre-filled after analysis. Review them on Profile.
+          </p>
+          <AllSkills resume={resume} />
           <div className="mt-5 grid gap-5 md:grid-cols-2">
             <List title="Primary skills" items={resume.skills} />
             <List title="Additional skills" items={resume.additionalSkills} />
-            <List title="Job titles" items={resume.titles} />
+            <List title="Programming languages" items={resume.programmingLanguages ?? []} />
+            <List title="Frameworks" items={resume.frameworks ?? []} />
+            <List title="Tools" items={resume.tools ?? []} />
             <List title="Technologies" items={resume.technologies ?? []} />
+            <List title="Databases" items={resume.databases ?? []} />
+            <List title="Cloud" items={resume.cloudTechnologies ?? []} />
+            <List title="Job titles" items={resume.titles} />
             <List title="Education" items={resume.education} />
             <List title="Certifications" items={resume.certifications} />
             <List title="Projects" items={resume.projects ?? []} />
@@ -151,12 +163,32 @@ export function ResumePanel() {
   );
 }
 
+function AllSkills({ resume }: { resume: ResumeAnalysis }) {
+  const skills = useMemo(() => allResumeSkills(resume), [resume]);
+  if (!skills.length) return null;
+  return (
+    <div className="mt-5">
+      <h3 className="text-sm font-semibold">All extracted skills</h3>
+      <ul className="mt-3 flex flex-wrap gap-2">
+        {skills.map((skill) => (
+          <li key={skill} className={chipClass}>
+            {skill}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function List({ title, items }: { title: string; items: string[] }) {
+  if (!items.length) return null;
   return (
     <div>
       <h3 className="text-sm font-semibold">{title}</h3>
       <ul className="mt-2 space-y-1 text-sm text-ink-secondary">
-        {items.length ? items.map((item) => <li key={item}>{item}</li>) : <li>None listed</li>}
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
       </ul>
     </div>
   );

@@ -2,6 +2,7 @@ package com.aijobportal.ai.matching;
 
 import com.aijobportal.ai.dto.MatchResultResponse;
 import com.aijobportal.ai.dto.MatchScoreBreakdownDto;
+import com.aijobportal.ai.dto.ScoreBreakdownDetailResponse;
 import com.aijobportal.ai.dto.ScoreBreakdownResponse;
 import com.aijobportal.ai.dto.SkillMatchResponse;
 import com.aijobportal.ai.matching.model.NormalizedCandidateProfile;
@@ -98,7 +99,16 @@ public class MatchAnalysisService {
                 matchedPreferred,
                 result.scoreCapApplied(),
                 result.scoreCapReason(),
-                ScoreBreakdownResponse.from(result.scoreBreakdown())
+                ScoreBreakdownResponse.from(result.scoreBreakdown()),
+                ScoreBreakdownDetailResponse.from(
+                        result.scoredBreakdown(),
+                        result.totalEarnedPoints(),
+                        result.applicableMaximumPoints()
+                ),
+                result.totalEarnedPoints(),
+                result.applicableMaximumPoints(),
+                result.scoreReliable(),
+                result.scoreUnreliableReason()
         );
     }
 
@@ -108,6 +118,9 @@ public class MatchAnalysisService {
             List<String> missingRequired,
             List<String> matchedSkills
     ) {
+        if (!result.scoreReliable() && result.scoreUnreliableReason() != null) {
+            return result.scoreUnreliableReason();
+        }
         if (matchedSkills.isEmpty()) {
             return "Limited match: no required skills matched. "
                     + formatMissing(missingCritical, missingRequired)

@@ -20,7 +20,12 @@ public record MatchResultResponse(
         List<String> matchedPreferredSkills,
         boolean scoreCapApplied,
         String scoreCapReason,
-        ScoreBreakdownResponse scoreBreakdownV2
+        ScoreBreakdownResponse scoreBreakdownV2,
+        ScoreBreakdownDetailResponse scoreBreakdownDetail,
+        Integer totalEarnedPoints,
+        Integer applicableMaximumPoints,
+        boolean scoreReliable,
+        String scoreUnreliableReason
 ) {
     public MatchResultResponse(
             String jobId,
@@ -48,6 +53,11 @@ public record MatchResultResponse(
                 List.of(),
                 false,
                 null,
+                null,
+                null,
+                null,
+                null,
+                true,
                 null
         );
     }

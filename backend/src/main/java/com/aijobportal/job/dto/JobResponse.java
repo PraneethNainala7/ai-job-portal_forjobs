@@ -13,6 +13,8 @@ public record JobResponse(
         List<String> skills,
         List<String> criticalSkills,
         List<String> preferredSkills,
+        List<String> educationRequirements,
+        List<String> certificationRequirements,
         String location,
         String salary,
         String jobType,

@@ -7,13 +7,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class ExperienceMatchingService {
-
-    private static final Pattern YEARS_PATTERN = Pattern.compile("(\\d+)\\+?\\s*(?:years?|yrs?)");
 
     private final MatchScorePolicy policy;
 
@@ -27,7 +23,7 @@ public class ExperienceMatchingService {
         int candidateYears = resolveCandidateYears(candidate, job);
 
         if (requiredYears <= 0) {
-            return candidateYears > 0 ? maxPoints / 2 : 0;
+            return 0;
         }
         if (candidateYears <= 0) {
             return candidate.experience() != null && !candidate.experience().isBlank() ? maxPoints / 4 : 0;
@@ -71,7 +67,7 @@ public class ExperienceMatchingService {
                 return byDomain.get("total");
             }
         }
-        return parseYears(candidate.experience());
+        return ExperienceTextParser.parseYears(candidate.experience(), ExperienceTextParser.ParseMode.MAX_YEARS);
     }
 
     private static double domainFactor(String jobDomain, String candidateDomain) {
@@ -85,17 +81,6 @@ public class ExperienceMatchingService {
             return 0.6;
         }
         return 0.2;
-    }
-
-    private static int parseYears(String value) {
-        if (value == null || value.isBlank()) {
-            return 0;
-        }
-        Matcher matcher = YEARS_PATTERN.matcher(value.toLowerCase(Locale.ROOT));
-        if (matcher.find()) {
-            return Integer.parseInt(matcher.group(1));
-        }
-        return 0;
     }
 
     private static String domainOf(String text) {

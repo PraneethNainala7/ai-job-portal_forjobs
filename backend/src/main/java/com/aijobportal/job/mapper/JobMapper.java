@@ -23,6 +23,8 @@ public final class JobMapper {
     ) {
         List<String> preferred = job.getPreferredSkills();
         List<String> critical = job.getCriticalSkills();
+        List<String> educationRequirements = job.getEducationRequirements();
+        List<String> certificationRequirements = job.getCertificationRequirements();
         return new JobResponse(
                 job.getId(),
                 job.getRole(),
@@ -31,6 +33,8 @@ public final class JobMapper {
                 job.getSkills(),
                 critical == null || critical.isEmpty() ? null : critical,
                 preferred == null || preferred.isEmpty() ? null : preferred,
+                educationRequirements == null || educationRequirements.isEmpty() ? null : educationRequirements,
+                certificationRequirements == null || certificationRequirements.isEmpty() ? null : certificationRequirements,
                 job.getLocation(),
                 job.getSalary(),
                 job.getJobType(),
@@ -49,6 +53,7 @@ public final class JobMapper {
     public static JobResponse withMatch(JobResponse job, int matchScore) {
         return new JobResponse(
                 job.id(), job.role(), job.companyName(), job.experience(), job.skills(), job.criticalSkills(), job.preferredSkills(),
+                job.educationRequirements(), job.certificationRequirements(),
                 job.location(), job.salary(), job.jobType(), job.workMode(), job.description(), job.status(),
                 job.postedDate(), job.employerId(), matchScore, job.applicantCount(), job.shortlistedCount(), job.employerName()
         );
