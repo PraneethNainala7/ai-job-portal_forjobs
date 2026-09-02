@@ -1,13 +1,17 @@
 package com.aijobportal.ai.service;
 
 import com.aijobportal.ai.client.AiClient;
+import com.aijobportal.ai.client.DisabledAiClient;
+import com.aijobportal.ai.client.ResumeAnalysisOutcome;
 import com.aijobportal.ai.client.ResumeTextExtractor;
+import com.aijobportal.ai.config.AiProperties;
 import com.aijobportal.ai.dto.InterviewQuestionsEnvelope;
 import com.aijobportal.ai.dto.InterviewQuestionsRequest;
 import com.aijobportal.ai.dto.InterviewQuestionsResponse;
 import com.aijobportal.ai.dto.MatchResultResponse;
 import com.aijobportal.ai.dto.RecommendationItem;
 import com.aijobportal.ai.dto.RecommendationResponse;
+import com.aijobportal.ai.matching.MatchAnalysisService;
 import com.aijobportal.ai.entity.InterviewQuestionSet;
 import com.aijobportal.ai.entity.MatchResultEntity;
 import com.aijobportal.ai.repository.InterviewQuestionRepository;
@@ -27,14 +31,11 @@ import com.aijobportal.common.domain.ResumeStatus;
 import com.aijobportal.common.domain.Role;
 import com.aijobportal.common.exception.ApiException;
 import com.aijobportal.config.security.AuthPrincipal;
-import com.aijobportal.job.dto.JobListResponse;
 import com.aijobportal.job.dto.JobResponse;
 import com.aijobportal.job.entity.Job;
 import com.aijobportal.job.mapper.JobMapper;
 import com.aijobportal.job.service.JobCommandService;
 import com.aijobportal.job.service.JobQueryService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,9 +48,8 @@ import java.util.stream.Collectors;
 @Service
 public class AiService {
 
-    private static final Logger log = LoggerFactory.getLogger(AiService.class);
-
     private final AiClient aiClient;
+    private final MatchAnalysisService matchAnalysisService;
     private final ResumeTextExtractor resumeTextExtractor;
     private final AiUsageService aiUsageService;
     private final CandidateProfileService candidateProfileService;
@@ -59,9 +59,11 @@ public class AiService {
     private final MatchResultRepository matchResultRepository;
     private final InterviewQuestionRepository interviewQuestionRepository;
     private final JobApplicationRepository applicationRepository;
+    private final AiProperties aiProperties;
 
     public AiService(
             AiClient aiClient,
+            MatchAnalysisService matchAnalysisService,
             ResumeTextExtractor resumeTextExtractor,
             AiUsageService aiUsageService,
             CandidateProfileService candidateProfileService,
@@ -70,9 +72,11 @@ public class AiService {
             JobCommandService jobCommandService,
             MatchResultRepository matchResultRepository,
             InterviewQuestionRepository interviewQuestionRepository,
-            JobApplicationRepository applicationRepository
+            JobApplicationRepository applicationRepository,
+            AiProperties aiProperties
     ) {
         this.aiClient = aiClient;
+        this.matchAnalysisService = matchAnalysisService;
         this.resumeTextExtractor = resumeTextExtractor;
         this.aiUsageService = aiUsageService;
         this.candidateProfileService = candidateProfileService;
@@ -82,6 +86,7 @@ public class AiService {
         this.matchResultRepository = matchResultRepository;
         this.interviewQuestionRepository = interviewQuestionRepository;
         this.applicationRepository = applicationRepository;
+        this.aiProperties = aiProperties;
     }
 
     @Transactional
@@ -91,10 +96,23 @@ public class AiService {
                 .orElseThrow(() -> ApiException.badRequest("Upload a resume before running analysis."));
         String resumeText = resumeTextExtractor.extractOrEmpty(resume.getFileUrl(), resume.getFileName());
         resume.setParsedText(resumeText.isBlank() ? null : resumeText);
-        ResumeAnalysisResponse result = aiClient.analyzeResume(profile, CandidateMapper.toResume(resume), resumeText);
+        ResumeAnalysisOutcome outcome;
+        if (resumeText.isBlank()) {
+            outcome = DisabledAiClient.failedOutcome(
+                    CandidateMapper.toResume(resume),
+                    "Could not read text from this resume. Upload a text-based PDF or DOCX file and retry."
+            );
+        } else {
+            outcome = aiClient.analyzeResume(
+                    profile,
+                    CandidateMapper.toResume(resume),
+                    resumeText
+            );
+        }
+        ResumeAnalysisResponse result = outcome.response();
         resume.setStatus(ResumeStatus.valueOf(result.status()));
         resume.setError(result.error());
-        resume.setParsedData(CandidateMapper.toParsedData(result));
+        resume.setParsedData(outcome.parsedData());
         if (result.status().equals(ResumeStatus.FAILED.name())) {
             aiUsageService.increment("failures");
         } else {
@@ -105,23 +123,33 @@ public class AiService {
 
     @Transactional
     public RecommendationResponse recommend(AuthPrincipal principal) {
-        CandidateProfileResponse profile = candidateProfileService.scoringProfile(principal);
-        JobListResponse jobs = jobQueryService.search(null, null, null, null, null, null, null, 1, 20);
-        List<Job> entities = jobs.items().stream().map(job -> jobCommandService.requireJob(job.id())).toList();
+        int minScore = aiProperties.getRecommendationMinScore();
+        Resume resume = resumeRepository.findByCandidateId(principal.id()).orElse(null);
+        boolean resumeReady = resume != null && resume.getStatus() == ResumeStatus.COMPLETE;
+        if (!resumeReady) {
+            return new RecommendationResponse(List.of(), minScore, 0, false);
+        }
+
+        List<JobResponse> activeJobs = jobQueryService.listAllActive();
+        if (activeJobs.isEmpty()) {
+            return new RecommendationResponse(List.of(), minScore, 0, true);
+        }
+
         Map<String, JobResponse> byId = new LinkedHashMap<>();
-        jobs.items().forEach(job -> byId.put(job.id(), job));
-        List<MatchResultResponse> ranked;
-        try {
-            ranked = aiClient.rankJobs(profile, entities);
-        } catch (RuntimeException ex) {
-            log.warn("Claude job ranking failed; returning no scores. {}", ex.getMessage());
-            return new RecommendationResponse(List.of());
-        }
+        activeJobs.forEach(job -> byId.put(job.id(), job));
+        List<Job> entities = activeJobs.stream().map(job -> jobCommandService.requireJob(job.id())).toList();
+
+        CandidateProfileResponse profile = candidateProfileService.scoringProfile(principal);
+        List<MatchResultResponse> ranked = matchAnalysisService.rankAll(profile, entities, resume);
         if (ranked.isEmpty()) {
-            return new RecommendationResponse(List.of());
+            return new RecommendationResponse(List.of(), minScore, activeJobs.size(), true);
         }
+
         List<RecommendationItem> items = ranked.stream()
                 .filter(match -> byId.get(match.jobId()) != null)
+                .filter(match -> match.matchScore() >= minScore)
+                .sorted(Comparator.comparingInt(MatchResultResponse::matchScore).reversed())
+                .limit(aiProperties.getRecommendationMaxResults())
                 .map(match -> {
                     MatchResultResponse stored = persistMatch(match);
                     return new RecommendationItem(
@@ -129,28 +157,17 @@ public class AiService {
                             stored
                     );
                 })
-                .sorted(Comparator.comparingInt((RecommendationItem item) -> item.match().matchScore()).reversed())
-                .limit(6)
                 .toList();
         aiUsageService.increment("recommendations");
-        return new RecommendationResponse(items);
+        return new RecommendationResponse(items, minScore, activeJobs.size(), true);
     }
 
     @Transactional
     public MatchResultResponse match(AuthPrincipal principal, String jobId) {
         CandidateProfileResponse profile = candidateProfileService.scoringProfile(principal);
         Job job = jobCommandService.requireJob(jobId);
-        List<MatchResultResponse> ranked;
-        try {
-            ranked = aiClient.rankJobs(profile, List.of(job));
-        } catch (RuntimeException ex) {
-            log.warn("Claude match failed; not using heuristic scores. {}", ex.getMessage());
-            throw ApiException.unavailable("Match analysis is unavailable for this role.");
-        }
-        if (ranked.isEmpty()) {
-            throw ApiException.unavailable("Match analysis is unavailable for this role.");
-        }
-        MatchResultResponse match = persistMatch(ranked.getFirst());
+        Resume resume = resumeRepository.findByCandidateId(principal.id()).orElse(null);
+        MatchResultResponse match = persistMatch(matchAnalysisService.analyze(job, profile, resume));
         aiUsageService.increment("jobMatch");
         return match;
     }
@@ -169,13 +186,7 @@ public class AiService {
         }
         CandidateProfileResponse profile = candidateProfileService.scoringProfile(principal);
         List<Job> entities = jobs.stream().map(job -> jobCommandService.requireJob(job.id())).toList();
-        List<MatchResultResponse> ranked;
-        try {
-            ranked = aiClient.rankJobs(profile, entities);
-        } catch (RuntimeException ex) {
-            log.warn("Claude job list scoring failed; returning jobs without scores. {}", ex.getMessage());
-            return jobs;
-        }
+        List<MatchResultResponse> ranked = matchAnalysisService.rankAll(profile, entities, resume);
         if (ranked.isEmpty()) {
             return jobs;
         }

@@ -5,13 +5,13 @@ import {
   UserCircleIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
 import { cardInteractiveClass } from "@/components/ui/control-styles";
-import { getHomePath } from "@/config/routes";
 import { ApplicationList } from "@/features/candidate/components/application-list";
 import { RecommendationList } from "@/features/candidate/components/recommendation-list";
-import { getSession } from "@/lib/auth/session";
+import { getDashboardCopy } from "@/features/workspace/workspace-copy";
+import { getFreshSession } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -22,16 +22,15 @@ const links = [
 ];
 
 export default async function CandidateDashboardPage() {
-  const session = await getSession();
+  const session = await getFreshSession();
   if (!session) redirect("/login");
-  if (session.accountStatus !== "ACTIVE") redirect(getHomePath(session.role, session.accountStatus));
 
   return (
     <>
       <PageHeader
         crumbs={[{ label: "Candidate" }, { label: "Dashboard" }]}
         title={`Welcome, ${session.name}`}
-        description="Complete your profile, keep your resume current, then review ranked recommendations before you apply."
+        description={getDashboardCopy(session).description}
       />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {links.map((link) => {

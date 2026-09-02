@@ -50,6 +50,7 @@ export interface Job {
   companyName: string;
   experience: string;
   skills: string[];
+  criticalSkills?: string[];
   preferredSkills?: string[];
   location: string;
   salary: string;
@@ -68,6 +69,33 @@ export interface JobListResponse {
   pageSize: number;
 }
 
+export interface MatchScoreBreakdown {
+  requiredSkills: number;
+  preferredSkills: number;
+  experience: number;
+  roleRelevance: number;
+  semanticSimilarity?: number;
+  education: number;
+  criticalRequiredSkills?: number;
+  relevantExperience?: number;
+  educationAndCertifications?: number;
+}
+
+export interface SkillMatchDetail {
+  jobSkill: string;
+  candidateSkill?: string | null;
+  matchType: "EXACT_MATCH" | "RELATED_MATCH" | "TRANSFERABLE_MATCH" | "NO_MATCH";
+}
+
+export interface ScoreBreakdownV2 {
+  criticalRequiredSkills: number;
+  requiredSkills: number;
+  preferredSkills: number;
+  relevantExperience: number;
+  roleRelevance: number;
+  educationAndCertifications: number;
+}
+
 export interface MatchResult {
   jobId: string;
   candidateId: string;
@@ -75,6 +103,25 @@ export interface MatchResult {
   strongAreas: string[];
   gaps: string[];
   explanation?: string;
+  matchedSkills?: string[];
+  partiallyRelevantSkills?: string[];
+  missingRequiredSkills?: string[];
+  missingPreferredSkills?: string[];
+  scoreBreakdown?: MatchScoreBreakdown;
+  matchedSkillDetails?: SkillMatchDetail[];
+  partiallyMatchedSkills?: SkillMatchDetail[];
+  missingCriticalSkills?: string[];
+  matchedPreferredSkills?: string[];
+  scoreCapApplied?: boolean;
+  scoreCapReason?: string | null;
+  scoreBreakdownV2?: ScoreBreakdownV2;
+}
+
+export interface RecommendationResponse {
+  items: Array<{ job: Job & { matchScore?: number }; match: MatchResult }>;
+  minScore: number;
+  evaluatedCount: number;
+  resumeReady: boolean;
 }
 
 export interface Application {
@@ -134,6 +181,10 @@ export interface ApplicationRecord extends Application {
 
 export interface AuthResponse {
   user: SessionUser;
+}
+
+export interface GoogleAuthResponse extends AuthResponse {
+  needsEmployerOnboarding: boolean;
 }
 
 export interface AdminAccount extends SessionUser {

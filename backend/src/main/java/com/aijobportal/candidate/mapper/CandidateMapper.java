@@ -7,6 +7,7 @@ import com.aijobportal.candidate.entity.Resume;
 import com.aijobportal.common.domain.ResumeStatus;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,8 +33,43 @@ public final class CandidateMapper {
         );
     }
 
-    @SuppressWarnings("unchecked")
     public static ResumeAnalysisResponse toResume(Resume resume) {
+        if (resume.getStatus() == ResumeStatus.COMPLETE && isLegacyHeuristicStub(resume.getParsedData())) {
+            return new ResumeAnalysisResponse(
+                    ResumeStatus.FAILED.name(),
+                    resume.getFileName(),
+                    resume.getCreatedAt() == null ? null : resume.getCreatedAt().toString(),
+                    List.of(),
+                    List.of(),
+                    null,
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    null,
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    "Stored resume analysis is outdated. Re-run AI analysis after confirming ANTHROPIC_API_KEY is set."
+            );
+        }
+        if (resume.getStatus() != ResumeStatus.COMPLETE || !hasParsedAnalysis(resume.getParsedData())) {
+            return new ResumeAnalysisResponse(
+                    resume.getStatus().name(),
+                    resume.getFileName(),
+                    resume.getCreatedAt() == null ? null : resume.getCreatedAt().toString(),
+                    List.of(),
+                    List.of(),
+                    null,
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    null,
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    resume.getError()
+            );
+        }
         Map<String, Object> data = resume.getParsedData();
         return new ResumeAnalysisResponse(
                 resume.getStatus().name(),
@@ -53,19 +89,66 @@ public final class CandidateMapper {
         );
     }
 
+    public static Map<String, Object> emptyParsedData() {
+        return toParsedData(new ResumeAnalysisResponse(
+                ResumeStatus.PROCESSING.name(),
+                null,
+                null,
+                List.of(),
+                List.of(),
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                null,
+                List.of(),
+                List.of(),
+                List.of(),
+                null
+        ));
+    }
+
+    private static boolean hasParsedAnalysis(Map<String, Object> data) {
+        if (data == null || data.isEmpty()) {
+            return false;
+        }
+        return !stringList(data, "skills").isEmpty()
+                || !stringList(data, "additionalSkills").isEmpty()
+                || !stringList(data, "titles").isEmpty()
+                || !stringList(data, "technologies").isEmpty()
+                || stringValue(data, "experience") != null;
+    }
+
+    private static boolean isLegacyHeuristicStub(Map<String, Object> data) {
+        if (data == null || data.isEmpty()) {
+            return false;
+        }
+        return stringList(data, "skills").equals(List.of("Communication", "Problem solving"))
+                && stringList(data, "additionalSkills").equals(List.of("Git", "Agile"))
+                && "Mid-level".equals(stringValue(data, "seniority"))
+                && stringList(data, "projects").equals(List.of("Professional project history"))
+                && stringList(data, "industries").equals(List.of("Technology"));
+    }
+
     public static Map<String, Object> toParsedData(ResumeAnalysisResponse analysis) {
-        return Map.of(
-                "skills", orEmpty(analysis.skills()),
-                "additionalSkills", orEmpty(analysis.additionalSkills()),
-                "experience", analysis.experience() == null ? "" : analysis.experience(),
-                "titles", orEmpty(analysis.titles()),
-                "education", orEmpty(analysis.education()),
-                "certifications", orEmpty(analysis.certifications()),
-                "seniority", analysis.seniority() == null ? "" : analysis.seniority(),
-                "technologies", orEmpty(analysis.technologies()),
-                "projects", orEmpty(analysis.projects()),
-                "industries", orEmpty(analysis.industries())
-        );
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("skills", orEmpty(analysis.skills()));
+        data.put("additionalSkills", orEmpty(analysis.additionalSkills()));
+        data.put("experience", analysis.experience() == null ? "" : analysis.experience());
+        data.put("titles", orEmpty(analysis.titles()));
+        data.put("education", orEmpty(analysis.education()));
+        data.put("certifications", orEmpty(analysis.certifications()));
+        data.put("seniority", analysis.seniority() == null ? "" : analysis.seniority());
+        data.put("technologies", orEmpty(analysis.technologies()));
+        data.put("projects", orEmpty(analysis.projects()));
+        data.put("industries", orEmpty(analysis.industries()));
+        data.put("programmingLanguages", List.of());
+        data.put("frameworks", List.of());
+        data.put("databases", List.of());
+        data.put("cloudTechnologies", List.of());
+        data.put("tools", List.of());
+        data.put("experienceYears", Map.of());
+        return data;
     }
 
     public static CandidateProfileResponse withResumeSkills(CandidateProfileResponse profile, Resume resume) {
@@ -79,6 +162,9 @@ public final class CandidateMapper {
         }
         if (analysis.additionalSkills() != null) {
             merged.addAll(analysis.additionalSkills());
+        }
+        if (analysis.technologies() != null) {
+            merged.addAll(analysis.technologies());
         }
         List<String> unique = new ArrayList<>();
         for (String skill : merged) {

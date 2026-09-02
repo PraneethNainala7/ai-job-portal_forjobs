@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { TextAreaField, TextField } from "@/components/ui/field";
+import { AutocompleteTextField } from "@/components/ui/autocomplete-text-field";
+import { CITY_SUGGESTIONS } from "@/lib/city-suggestions";
 import { LoadingPanel } from "@/components/ui/loading-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,7 +72,7 @@ export function CompanyProfileForm({ canResubmit }: { canResubmit: boolean }) {
         defaultValue={data.companyInformation}
       />
       <div className="grid gap-5 md:grid-cols-2">
-        <TextField name="companyLocation" label="Location" required defaultValue={data.companyLocation} />
+        <AutocompleteTextField name="companyLocation" label="Location" required defaultValue={data.companyLocation} suggestions={CITY_SUGGESTIONS} />
         <TextField
           name="companyWebsite"
           label="Website"

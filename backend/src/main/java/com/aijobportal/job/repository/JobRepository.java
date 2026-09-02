@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.aijobportal.common.domain.AccountStatus;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +17,17 @@ public interface JobRepository extends JpaRepository<Job, String> {
 
     @Query("select j from Job j left join fetch j.employer where j.status = :status order by j.postedDate desc")
     List<Job> findByStatusOrderByPostedDateDesc(@Param("status") JobStatus status);
+
+    @Query("""
+            select j from Job j
+            join fetch j.employer e
+            where j.status = :status and e.accountStatus = :employerStatus
+            order by j.postedDate desc
+            """)
+    List<Job> findPublicActiveJobsOrderByPostedDateDesc(
+            @Param("status") JobStatus status,
+            @Param("employerStatus") AccountStatus employerStatus
+    );
 
     Optional<Job> findByIdAndEmployerId(String id, String employerId);
 

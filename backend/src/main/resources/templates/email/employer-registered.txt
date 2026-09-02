@@ -1,0 +1,9 @@
+Hello {{userName}},
+
+Thank you for registering {{companyName}} on AI Job Portal.
+
+Your employer account is currently PENDING admin approval. You can sign in to review or update your company profile, but employer features such as posting jobs and reviewing applicants will remain unavailable until an administrator approves your account.
+
+We will email you again once a decision has been made.
+
+Sign in: {{loginUrl}}

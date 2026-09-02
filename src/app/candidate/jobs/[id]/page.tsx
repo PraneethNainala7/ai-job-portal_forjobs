@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { ApplyButton } from "@/features/candidate/components/apply-button";
 import { MatchPanel } from "@/features/candidate/components/match-panel";
 import { fetchPublicJob } from "@/lib/api/server";
+import { getJobPrimarySkills } from "@/lib/jobs";
 
 export default async function CandidateJobDetailPage({
   params,
@@ -11,6 +12,7 @@ export default async function CandidateJobDetailPage({
   const { id } = await params;
   const job = await fetchPublicJob(id);
   if (!job) notFound();
+  const primarySkills = getJobPrimarySkills(job);
 
   return (
     <>
@@ -37,21 +39,35 @@ export default async function CandidateJobDetailPage({
           </dl>
           <h2 className="mt-8 text-xl font-semibold">About the role</h2>
           <p className="mt-3 text-sm leading-7 text-ink-secondary">{job.description}</p>
-          <h2 className="mt-8 text-xl font-semibold">Required skills</h2>
-          <ul className="mt-3 flex flex-wrap gap-2">
-            {job.skills.map((skill) => (
-              <li key={skill} className="rounded-full bg-muted px-3 py-1.5 text-sm">{skill}</li>
-            ))}
-          </ul>
+          {primarySkills.length ? (
+            <>
+              <h2 className="mt-8 text-xl font-semibold">Skills</h2>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {primarySkills.map((skill) => (
+                  <li key={skill} className="rounded-full bg-muted px-3 py-1.5 text-sm">{skill}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {job.preferredSkills?.length ? (
+            <>
+              <h2 className="mt-8 text-xl font-semibold">Preferred skills</h2>
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {job.preferredSkills.map((skill) => (
+                  <li key={skill} className="rounded-full bg-muted px-3 py-1.5 text-sm">{skill}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </article>
         <aside className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
-          <MatchPanel jobId={job.id} />
           <div className="rounded-[var(--radius-card)] border bg-surface p-5">
             <ApplyButton jobId={job.id} />
             <Link href="/candidate/jobs" className="mt-3 block text-center text-sm font-medium text-primary">
               Back to jobs
             </Link>
           </div>
+          <MatchPanel jobId={job.id} />
         </aside>
       </div>
     </>

@@ -4,6 +4,17 @@ server:
 spring:
   application:
     name: ai-job-portal
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_APP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/aijobportal}
     username: ${DATABASE_USER:aijob}
@@ -33,6 +44,12 @@ springdoc:
     path: /swagger-ui
 
 app:
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from-name: AI Job Portal
+  frontend-url: ${APP_FRONTEND_URL:http://localhost:3000}
+  password-reset:
+    expiration-minutes: 60
   jwt:
     secret: ${JWT_SECRET:change-me-in-production-use-a-long-random-secret-key-value-64}
     expiration-ms: 604800000
@@ -44,8 +61,30 @@ app:
     password: ${ADMIN_PASSWORD:admin_123}
     name: ${ADMIN_NAME:Admin}
   anthropic:
-    api-key: ${ANTHROPIC_API_KEY:"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"}
+    api-key: ${ANTHROPIC_API_KEY:}
     model: ${ANTHROPIC_MODEL:claude-sonnet-4-6}
+  ai:
+    recommendation-min-score: 60
+    recommendation-max-results: 12
+    recommendation-batch-size: 20
+  matching:
+    weights:
+      required-skills: 50
+      preferred-skills: 15
+      experience: 20
+      role-relevance: 10
+      education: 5
+    skill-credits:
+      exact: 1.0
+      related: 0.5
+      transferable: 0.2
+    caps:
+      zero-critical-max-score: 30
+      low-required-ratio-threshold: 0.30
+      low-required-max-score: 35
+    rounding: HALF_UP
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:371497904463-hnd22p0e4119mjo6ta7b7r5lf08k9p5n.apps.googleusercontent.com}
 
 logging:
   level:

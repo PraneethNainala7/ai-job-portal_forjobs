@@ -1,0 +1,127 @@
+package com.aijobportal.ai.matching.normalization;
+
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+@Service
+public class SkillNormalizationService {
+
+    private static final Set<String> DISTINCT_TOKENS = Set.of("java", "javascript", "typescript");
+
+    private static final Map<String, String> ALIASES = aliasMap();
+
+    public String normalizeKey(String skill) {
+        if (skill == null || skill.isBlank()) {
+            return "";
+        }
+        String cleaned = skill.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        return ALIASES.getOrDefault(cleaned, cleaned);
+    }
+
+    public boolean exactMatch(String candidateSkill, String jobSkill) {
+        String candidateKey = normalizeKey(candidateSkill);
+        String jobKey = normalizeKey(jobSkill);
+        if (candidateKey.isBlank() || jobKey.isBlank()) {
+            return false;
+        }
+        if (candidateKey.equals(jobKey)) {
+            return true;
+        }
+        if (isDistinctTokenConflict(candidateKey, jobKey)) {
+            return false;
+        }
+        return ALIASES.getOrDefault(candidateKey, candidateKey).equals(ALIASES.getOrDefault(jobKey, jobKey));
+    }
+
+    public boolean isDistinctTokenConflict(String left, String right) {
+        if (left.equals("java") && right.contains("javascript")) {
+            return true;
+        }
+        if (right.equals("java") && left.contains("javascript")) {
+            return true;
+        }
+        if (left.equals("javascript") && right.equals("java")) {
+            return true;
+        }
+        return DISTINCT_TOKENS.contains(left) && DISTINCT_TOKENS.contains(right) && !left.equals(right);
+    }
+
+    public List<String> dedupe(List<String> skills) {
+        Map<String, String> seen = new LinkedHashMap<>();
+        if (skills == null) {
+            return List.of();
+        }
+        for (String skill : skills) {
+            if (skill == null || skill.isBlank()) {
+                continue;
+            }
+            String key = normalizeKey(skill);
+            if (!key.isBlank()) {
+                seen.putIfAbsent(key, skill.trim());
+            }
+        }
+        return new ArrayList<>(seen.values());
+    }
+
+    private static Map<String, String> aliasMap() {
+        Map<String, String> aliases = new LinkedHashMap<>();
+        putAlias(aliases, "spring boot", "spring boot");
+        putAlias(aliases, "springboot", "spring boot");
+        putAlias(aliases, "spring-boot", "spring boot");
+        putAlias(aliases, "spring framework", "spring framework");
+        putAlias(aliases, "spring", "spring framework");
+        putAlias(aliases, "hibernate", "hibernate");
+        putAlias(aliases, "jpa", "jpa");
+        putAlias(aliases, "hibernate/jpa", "jpa");
+        putAlias(aliases, "hibernate jpa", "jpa");
+        putAlias(aliases, "spring security", "spring security");
+        putAlias(aliases, "spring-security", "spring security");
+        putAlias(aliases, "rest api", "rest");
+        putAlias(aliases, "rest apis", "rest");
+        putAlias(aliases, "rest", "rest");
+        putAlias(aliases, "react.js", "react");
+        putAlias(aliases, "reactjs", "react");
+        putAlias(aliases, "react", "react");
+        putAlias(aliases, "next.js", "next.js");
+        putAlias(aliases, "nextjs", "next.js");
+        putAlias(aliases, "node.js", "node.js");
+        putAlias(aliases, "nodejs", "node.js");
+        putAlias(aliases, "javascript", "javascript");
+        putAlias(aliases, "js", "javascript");
+        putAlias(aliases, "typescript", "typescript");
+        putAlias(aliases, "ts", "typescript");
+        putAlias(aliases, "java", "java");
+        putAlias(aliases, "c#", "c#");
+        putAlias(aliases, "csharp", "c#");
+        putAlias(aliases, "kotlin", "kotlin");
+        putAlias(aliases, "python", "python");
+        putAlias(aliases, "sql", "sql");
+        putAlias(aliases, "postgresql", "postgresql");
+        putAlias(aliases, "postgres", "postgresql");
+        putAlias(aliases, "mysql", "mysql");
+        putAlias(aliases, "html", "html");
+        putAlias(aliases, "css", "css");
+        putAlias(aliases, "kubernetes", "kubernetes");
+        putAlias(aliases, "k8s", "kubernetes");
+        putAlias(aliases, "docker", "docker");
+        putAlias(aliases, "aws", "aws");
+        putAlias(aliases, "git", "git");
+        putAlias(aliases, "agile", "agile");
+        putAlias(aliases, "maven", "maven");
+        putAlias(aliases, "gradle", "gradle");
+        putAlias(aliases, "oauth", "oauth");
+        putAlias(aliases, "oauth2", "oauth");
+        putAlias(aliases, "express", "express");
+        return Map.copyOf(aliases);
+    }
+
+    private static void putAlias(Map<String, String> aliases, String alias, String canonical) {
+        aliases.put(alias, canonical);
+    }
+}

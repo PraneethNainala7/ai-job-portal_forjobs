@@ -1,0 +1,10 @@
+Hello {{userName}},
+
+We received your application for:
+
+Role: {{jobTitle}}
+Company: {{companyName}}
+
+Your application has been submitted successfully. The employer will review it through their hiring workflow. Match insights on the portal are decision support only and do not guarantee an outcome.
+
+View your applications: {{applicationsUrl}}

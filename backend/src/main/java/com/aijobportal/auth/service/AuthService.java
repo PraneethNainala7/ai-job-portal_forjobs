@@ -13,6 +13,8 @@ import com.aijobportal.common.domain.Role;
 import com.aijobportal.common.exception.ApiException;
 import com.aijobportal.employer.entity.Company;
 import com.aijobportal.employer.repository.CompanyRepository;
+import com.aijobportal.notification.event.EmployerRegisteredEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,25 +26,31 @@ public class AuthService {
     private final CompanyRepository companyRepository;
     private final CandidateProfileRepository candidateProfileRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AuthService(
             UserRepository userRepository,
             CompanyRepository companyRepository,
             CandidateProfileRepository candidateProfileRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.candidateProfileRepository = candidateProfileRepository;
         this.passwordEncoder = passwordEncoder;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
     public User login(LoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.email().trim())
-                .orElseThrow(() -> ApiException.unauthorized("Incorrect email or password."));
+                .orElseThrow(() -> ApiException.unauthorized("No account found with this email.", "USER_NOT_FOUND"));
+        if (user.getPasswordHash() == null) {
+            throw ApiException.unauthorized("This account uses Google sign-in.", "GOOGLE_ACCOUNT");
+        }
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw ApiException.unauthorized("Incorrect email or password.");
+            throw ApiException.unauthorized("Incorrect password.", "WRONG_PASSWORD");
         }
         if (user.getAccountStatus() == AccountStatus.INACTIVE) {
             throw ApiException.forbidden("This account is inactive.");
@@ -89,6 +97,11 @@ public class AuthService {
             company.setCin(request.cin().trim().toUpperCase());
             companyRepository.save(company);
             user.setCompany(company);
+            eventPublisher.publishEvent(new EmployerRegisteredEvent(
+                    user.getEmail(),
+                    user.getName(),
+                    company.getCompanyName()
+            ));
         }
         return user;
     }

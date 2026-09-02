@@ -1,0 +1,7 @@
+Hello {{userName}},
+
+Good news — {{companyName}} has been approved on AI Job Portal.
+
+Your account status is now ACTIVE. You can post jobs, review applicants, and use employer hiring tools.
+
+Open your dashboard: {{dashboardUrl}}

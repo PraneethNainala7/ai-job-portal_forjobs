@@ -37,13 +37,30 @@ export function RecommendationList() {
       </AiPanel>
     );
   }
-  if (!data?.items.length) {
+  if (!data?.resumeReady) {
     return (
       <AiPanel label="AI recommendations">
-        <p className="mt-3 font-semibold">No recommendations yet</p>
-        <p className="mt-2 text-sm text-ink-secondary">Add skills to your profile or upload a resume, then return here.</p>
-        <Link href="/candidate/profile" className={buttonClass({ variant: "link", className: "mt-4" })}>
-          Complete profile
+        <p className="mt-3 font-semibold">Complete your resume first</p>
+        <p className="mt-2 text-sm text-ink-secondary">
+          Upload and analyze your resume to unlock ranked recommendations. Find jobs still lists every open role with match scores once your resume is ready.
+        </p>
+        <Link href="/candidate/resume" className={buttonClass({ variant: "link", className: "mt-4" })}>
+          Upload resume
+        </Link>
+      </AiPanel>
+    );
+  }
+  if (!data.items.length) {
+    return (
+      <AiPanel label="AI recommendations">
+        <p className="mt-3 font-semibold">No strong matches yet</p>
+        <p className="mt-2 text-sm text-ink-secondary">
+          {data.evaluatedCount > 0
+            ? `We reviewed ${data.evaluatedCount} open role${data.evaluatedCount === 1 ? "" : "s"} and none scored ${data.minScore}% or higher. Browse all roles in Find jobs — every card still shows its match score.`
+            : "There are no open roles to rank right now. Check back later or browse Find jobs."}
+        </p>
+        <Link href="/candidate/jobs" className={buttonClass({ variant: "link", className: "mt-4" })}>
+          Browse all jobs
         </Link>
       </AiPanel>
     );
@@ -53,7 +70,11 @@ export function RecommendationList() {
     <div className="space-y-4">
       <AiPanel label="AI recommendations">
         <p className="mt-2 text-sm text-ink-secondary">
-          Ranked from your profile and resume analysis. Use these as support. They do not apply for you.
+          Curated shortlist only — roles at {data.minScore}% match or higher from{" "}
+          {data.evaluatedCount} open role{data.evaluatedCount === 1 ? "" : "s"} reviewed. For every open role including lower matches, use Find jobs.
+        </p>
+        <p className="mt-2 text-xs text-ink-secondary">
+          Showing {data.items.length} recommendation{data.items.length === 1 ? "" : "s"} above {data.minScore}% match.
         </p>
       </AiPanel>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

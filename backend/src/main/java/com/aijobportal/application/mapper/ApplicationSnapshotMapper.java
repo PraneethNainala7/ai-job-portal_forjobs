@@ -38,7 +38,11 @@ public final class ApplicationSnapshotMapper {
             return CandidateMapper.toProfile(profile);
         }
         Map<String, Object> data = application.getResumeParsedData();
-        List<String> skills = mergeSkills(stringList(data, "skills"), stringList(data, "additionalSkills"));
+        List<String> skills = mergeSkills(
+                stringList(data, "skills"),
+                stringList(data, "additionalSkills"),
+                stringList(data, "technologies")
+        );
         List<String> titles = stringList(data, "titles");
         String title = profile == null || profile.getTitle() == null || profile.getTitle().isBlank()
                 ? titles.isEmpty() ? null : titles.getFirst()
@@ -92,22 +96,26 @@ public final class ApplicationSnapshotMapper {
         );
     }
 
-    private static List<String> mergeSkills(List<String> primary, List<String> additional) {
+    private static List<String> mergeSkills(List<String> primary, List<String> additional, List<String> technologies) {
         Set<String> seen = new LinkedHashSet<>();
         List<String> merged = new ArrayList<>();
-        for (String skill : primary) {
-            String key = skill.toLowerCase();
-            if (seen.add(key)) {
-                merged.add(skill);
-            }
-        }
-        for (String skill : additional) {
-            String key = skill.toLowerCase();
-            if (seen.add(key)) {
-                merged.add(skill);
-            }
-        }
+        appendUnique(merged, seen, primary);
+        appendUnique(merged, seen, additional);
+        appendUnique(merged, seen, technologies);
         return merged;
+    }
+
+    private static void appendUnique(List<String> merged, Set<String> seen, List<String> values) {
+        for (String skill : values) {
+            String key = skill.toLowerCase();
+            if (seen.add(key)) {
+                merged.add(skill);
+            }
+        }
+    }
+
+    private static List<String> mergeSkills(List<String> primary, List<String> additional) {
+        return mergeSkills(primary, additional, List.of());
     }
 
     private static List<String> orEmpty(List<String> values) {

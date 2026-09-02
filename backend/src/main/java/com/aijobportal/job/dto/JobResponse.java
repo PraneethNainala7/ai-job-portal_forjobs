@@ -11,6 +11,7 @@ public record JobResponse(
         String companyName,
         String experience,
         List<String> skills,
+        List<String> criticalSkills,
         List<String> preferredSkills,
         String location,
         String salary,

@@ -1,0 +1,1 @@
+ALTER TABLE jobs ADD COLUMN critical_skills JSONB NOT NULL DEFAULT '[]';

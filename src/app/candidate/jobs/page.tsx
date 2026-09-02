@@ -10,7 +10,7 @@ export default function CandidateJobsPage() {
       <PageHeader
         crumbs={[{ label: "Candidate", href: "/candidate/dashboard" }, { label: "Find jobs" }]}
         title="Find jobs"
-        description="Filter open roles. Match percentages use your current profile skills."
+        description="Browse every open role with filters. Match percentages appear on each card once your resume analysis is complete."
       />
       <Suspense fallback={<LoadingInline className="h-24" message="Loading filters..." />}>
         <JobFilters basePath="/candidate/jobs" />

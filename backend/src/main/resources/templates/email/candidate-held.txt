@@ -1,0 +1,10 @@
+Hello {{userName}},
+
+Your candidate account on AI Job Portal has been placed on hold.
+
+Reason:
+{{reason}}
+
+Protected features such as applying for jobs are temporarily restricted until your account is restored.
+
+If you believe this is a mistake, contact the platform administrator.

@@ -1,0 +1,63 @@
+related:
+  - job: spring boot
+    candidate: spring framework
+  - job: spring boot
+    candidate: spring
+  - job: jpa
+    candidate: hibernate
+  - job: hibernate
+    candidate: jpa
+  - job: spring security
+    candidate: oauth
+  - job: oauth
+    candidate: spring security
+  - job: rest
+    candidate: rest api
+  - job: rest api
+    candidate: rest
+  - job: node.js
+    candidate: express
+  - job: react
+    candidate: next.js
+  - job: next.js
+    candidate: react
+transferable:
+  - job: java
+    candidate: c#
+    domain: backend
+  - job: java
+    candidate: kotlin
+    domain: backend
+  - job: c#
+    candidate: java
+    domain: backend
+  - job: python
+    candidate: java
+    domain: backend
+  - job: docker
+    candidate: kubernetes
+    domain: devops
+  - job: kubernetes
+    candidate: docker
+    domain: devops
+  - job: aws
+    candidate: azure
+    domain: cloud
+  - job: aws
+    candidate: gcp
+    domain: cloud
+  - job: sql
+    candidate: mysql
+    domain: data
+  - job: sql
+    candidate: postgresql
+    domain: data
+not-related:
+  - job: spring boot
+    candidate: react
+  - job: java
+    candidate: react
+  - job: java
+    candidate: javascript
+  - job: java
+    candidate: typescript

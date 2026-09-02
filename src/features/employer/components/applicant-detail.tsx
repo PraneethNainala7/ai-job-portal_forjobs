@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { LoadingPanel } from "@/components/ui/loading-panel";
 import { AiPanel } from "@/components/ai/ai-panel";
+import { MatchBreakdownPanel } from "@/features/candidate/components/match-breakdown-panel";
 import { TextAreaField } from "@/components/ui/field";
 import { InterviewQuestionsPanel } from "@/features/employer/components/interview-questions-panel";
 import {
@@ -105,15 +106,10 @@ export function ApplicantDetail({ jobId, applicationId }: { jobId: string; appli
           <AiPanel label="AI match analysis">
             <p className="mt-2 font-mono text-3xl font-semibold tabular-nums tracking-tight">{item.match.matchScore}%</p>
             <p className="mt-2 text-sm text-ink-secondary">Use this as supporting context, not a hiring decision.</p>
-            <h3 className="mt-4 text-sm font-semibold">Strengths</h3>
-            <ul className="mt-1 space-y-1 text-sm text-ink-secondary">
-              {item.match.strongAreas.length ? item.match.strongAreas.map((entry) => <li key={entry}>✓ {entry}</li>) : <li>None identified yet</li>}
-            </ul>
-            <h3 className="mt-4 text-sm font-semibold">Skill gaps</h3>
-            <ul className="mt-1 space-y-1 text-sm text-ink-secondary">
-              {item.match.gaps.length ? item.match.gaps.map((entry) => <li key={entry}>○ {entry}</li>) : <li>No required-skill gaps</li>}
-            </ul>
-            {item.match.explanation ? <p className="mt-4 text-sm leading-6 text-ink-secondary">{item.match.explanation}</p> : null}
+            <p className="mt-1 text-xs text-ink-secondary">
+              This score reflects the candidate profile at apply time. Live scoring is available on the job match panel or after re-apply.
+            </p>
+            <MatchBreakdownPanel match={item.match} />
           </AiPanel>
         ) : (
           <p className="text-sm text-ink-secondary">Match score is not available for this application.</p>

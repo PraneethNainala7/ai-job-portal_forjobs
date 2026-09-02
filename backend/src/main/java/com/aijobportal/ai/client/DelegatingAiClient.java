@@ -1,9 +1,10 @@
 package com.aijobportal.ai.client;
 
 import com.aijobportal.ai.dto.InterviewQuestionsResponse;
-import com.aijobportal.ai.dto.MatchResultResponse;
 import com.aijobportal.candidate.dto.CandidateProfileResponse;
 import com.aijobportal.candidate.dto.ResumeAnalysisResponse;
+import com.aijobportal.candidate.mapper.CandidateMapper;
+import com.aijobportal.common.domain.ResumeStatus;
 import com.aijobportal.job.entity.Job;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,15 +16,15 @@ public class DelegatingAiClient implements AiClient {
     private static final Logger log = LoggerFactory.getLogger(DelegatingAiClient.class);
 
     private final AiClient primary;
-    private final HeuristicAiClient fallback;
+    private final HeuristicAiClient interviewQuestions;
 
-    public DelegatingAiClient(AiClient primary, HeuristicAiClient fallback) {
+    public DelegatingAiClient(AiClient primary, HeuristicAiClient interviewQuestions) {
         this.primary = primary;
-        this.fallback = fallback;
+        this.interviewQuestions = interviewQuestions;
     }
 
     @Override
-    public ResumeAnalysisResponse analyzeResume(
+    public ResumeAnalysisOutcome analyzeResume(
             CandidateProfileResponse profile,
             ResumeAnalysisResponse current,
             String resumeText
@@ -31,28 +32,17 @@ public class DelegatingAiClient implements AiClient {
         try {
             return primary.analyzeResume(profile, current, resumeText);
         } catch (RuntimeException ex) {
-            log.warn("Claude resume analysis failed; using heuristic. {}", ex.getMessage());
-            return fallback.analyzeResume(profile, current, resumeText);
-        }
-    }
-
-    @Override
-    public MatchResultResponse scoreJob(Job job, CandidateProfileResponse profile) {
-        return fallback.scoreJob(job, profile);
-    }
-
-    @Override
-    public List<MatchResultResponse> rankJobs(CandidateProfileResponse profile, List<Job> jobs) {
-        try {
-            return primary.rankJobs(profile, jobs);
-        } catch (RuntimeException ex) {
-            log.warn("Claude job ranking failed; not using heuristic scores. {}", ex.getMessage());
-            return List.of();
+            log.warn("Claude resume analysis failed: {}", ex.getMessage());
+            return DisabledAiClient.failedOutcome(
+                    current,
+                    "Resume analysis failed: " + ex.getMessage()
+                            + ". Check ANTHROPIC_API_KEY on the Spring Boot process and retry."
+            );
         }
     }
 
     @Override
     public InterviewQuestionsResponse interviewQuestions(Job job, CandidateProfileResponse candidate) {
-        return fallback.interviewQuestions(job, candidate);
+        return interviewQuestions.interviewQuestions(job, candidate);
     }
 }

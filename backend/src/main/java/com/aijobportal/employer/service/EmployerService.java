@@ -20,11 +20,14 @@ import com.aijobportal.config.security.AuthPrincipal;
 import com.aijobportal.employer.dto.CompanyUpdateRequest;
 import com.aijobportal.employer.dto.EmployerApplicantResponse;
 import com.aijobportal.employer.dto.EmployerDashboardResponse;
+import com.aijobportal.employer.dto.EmployerOnboardingRequest;
 import com.aijobportal.employer.entity.Company;
 import com.aijobportal.employer.repository.CompanyRepository;
 import com.aijobportal.job.entity.Job;
 import com.aijobportal.job.repository.JobRepository;
 import com.aijobportal.job.service.JobCommandService;
+import com.aijobportal.notification.event.EmployerRegisteredEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +44,7 @@ public class EmployerService {
     private final CandidateProfileRepository profileRepository;
     private final JobCommandService jobCommandService;
     private final ApplicationService applicationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public EmployerService(
             CompanyRepository companyRepository,
@@ -49,7 +53,8 @@ public class EmployerService {
             JobApplicationRepository applicationRepository,
             CandidateProfileRepository profileRepository,
             JobCommandService jobCommandService,
-            ApplicationService applicationService
+            ApplicationService applicationService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
@@ -58,6 +63,7 @@ public class EmployerService {
         this.profileRepository = profileRepository;
         this.jobCommandService = jobCommandService;
         this.applicationService = applicationService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -80,6 +86,32 @@ public class EmployerService {
         company.setDescription(request.companyInformation().trim());
         company.setLocation(request.companyLocation().trim());
         company.setWebsite(blank(request.companyWebsite()) ? null : request.companyWebsite().trim());
+        return UserMapper.toUser(user, company);
+    }
+
+    @Transactional
+    public UserResponse completeOnboarding(AuthPrincipal principal, EmployerOnboardingRequest request) {
+        AccountStatusRules.requireEmployer(principal.role());
+        User user = userRepository.findById(principal.id()).orElseThrow(() -> ApiException.unauthorized("Sign-in required."));
+        if (companyRepository.findByEmployerId(user.getId()).isPresent()) {
+            throw ApiException.badRequest("Company profile is already set up.");
+        }
+        validateOnboarding(request);
+        Company company = new Company();
+        company.setEmployer(user);
+        company.setCompanyName(request.companyName().trim());
+        company.setDescription(request.companyInformation().trim());
+        company.setLocation(request.companyLocation().trim());
+        company.setWebsite(blank(request.companyWebsite()) ? null : request.companyWebsite().trim());
+        company.setCin(request.cin().trim().toUpperCase());
+        companyRepository.save(company);
+        user.setAccountStatus(AccountStatus.PENDING);
+        user.setCompany(company);
+        eventPublisher.publishEvent(new EmployerRegisteredEvent(
+                user.getEmail(),
+                user.getName(),
+                company.getCompanyName()
+        ));
         return UserMapper.toUser(user, company);
     }
 
@@ -135,5 +167,23 @@ public class EmployerService {
 
     private static boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private void validateOnboarding(EmployerOnboardingRequest request) {
+        if (blank(request.companyName())) {
+            throw ApiException.badRequest("Company name is required.");
+        }
+        if (blank(request.companyInformation())) {
+            throw ApiException.badRequest("Company information is required.");
+        }
+        if (blank(request.companyLocation())) {
+            throw ApiException.badRequest("Company location is required.");
+        }
+        if (blank(request.cin()) || request.cin().trim().length() < 8) {
+            throw ApiException.badRequest("CIN is mandatory.");
+        }
+        if (companyRepository.existsByCinIgnoreCase(request.cin().trim())) {
+            throw ApiException.conflict("An employer with this CIN already exists.");
+        }
     }
 }

@@ -11,6 +11,13 @@ import com.aijobportal.common.domain.Role;
 import com.aijobportal.common.exception.ApiException;
 import com.aijobportal.config.security.AuthPrincipal;
 import com.aijobportal.employer.repository.CompanyRepository;
+import com.aijobportal.notification.event.CandidateAccountHeldEvent;
+import com.aijobportal.notification.event.CandidateAccountRestoredEvent;
+import com.aijobportal.notification.event.EmployerAccountHeldEvent;
+import com.aijobportal.notification.event.EmployerAccountRestoredEvent;
+import com.aijobportal.notification.event.EmployerApprovedEvent;
+import com.aijobportal.notification.event.EmployerRejectedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,17 +30,20 @@ public class AdminAccountService {
     private final CompanyRepository companyRepository;
     private final AuditService auditService;
     private final AdminQueryService adminQueryService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AdminAccountService(
             UserRepository userRepository,
             CompanyRepository companyRepository,
             AuditService auditService,
-            AdminQueryService adminQueryService
+            AdminQueryService adminQueryService,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.userRepository = userRepository;
         this.companyRepository = companyRepository;
         this.auditService = auditService;
         this.adminQueryService = adminQueryService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -55,7 +65,37 @@ public class AdminAccountService {
             user.setHoldReason(null);
         }
         auditService.record(admin, action, user.getRole().name(), user.getId(), previous.name(), next.name(), reason);
+        publishStatusChangeEvent(user, action, reason);
         return UserMapper.toAdminAccount(user, companyRepository.findByEmployerId(user.getId()).orElse(null));
+    }
+
+    private void publishStatusChangeEvent(User user, String action, String reason) {
+        if (user.getRole() == Role.EMPLOYER) {
+            String companyName = companyRepository.findByEmployerId(user.getId())
+                    .map(company -> company.getCompanyName())
+                    .orElse("Your company");
+            switch (action) {
+                case "APPROVE_EMPLOYER" -> eventPublisher.publishEvent(
+                        new EmployerApprovedEvent(user.getEmail(), user.getName(), companyName));
+                case "REJECT_EMPLOYER" -> eventPublisher.publishEvent(
+                        new EmployerRejectedEvent(user.getEmail(), user.getName(), companyName, reason));
+                case "HOLD_EMPLOYER", "HOLD_USER" -> eventPublisher.publishEvent(
+                        new EmployerAccountHeldEvent(user.getEmail(), user.getName(), companyName, reason));
+                case "ACTIVATE_EMPLOYER", "ACTIVATE_USER" -> eventPublisher.publishEvent(
+                        new EmployerAccountRestoredEvent(user.getEmail(), user.getName(), companyName));
+                default -> { }
+            }
+            return;
+        }
+        if (user.getRole() == Role.CANDIDATE) {
+            switch (action) {
+                case "HOLD_USER" -> eventPublisher.publishEvent(
+                        new CandidateAccountHeldEvent(user.getEmail(), user.getName(), reason));
+                case "ACTIVATE_USER" -> eventPublisher.publishEvent(
+                        new CandidateAccountRestoredEvent(user.getEmail(), user.getName()));
+                default -> { }
+            }
+        }
     }
 
     @Transactional

@@ -1,0 +1,10 @@
+Hello {{userName}},
+
+Your employer registration for {{companyName}} was not approved at this time.
+
+Reason provided:
+{{reason}}
+
+You may update your company information and resubmit your registration for review.
+
+Update profile: {{profileUrl}}

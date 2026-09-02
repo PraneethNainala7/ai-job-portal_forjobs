@@ -144,7 +144,8 @@ public class CandidateProfileService {
             resume.setFileUrl(target.toString());
             resume.setStatus(ResumeStatus.PROCESSING);
             resume.setError(null);
-            resume.setParsedData(null);
+            resume.setParsedText(null);
+            resume.setParsedData(CandidateMapper.emptyParsedData());
             resumeRepository.save(resume);
             return CandidateMapper.toResume(resume);
         } catch (IOException ex) {

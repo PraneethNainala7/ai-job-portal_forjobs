@@ -3,10 +3,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChipInput } from "@/components/ui/chip-input";
+import { AutocompleteTextField } from "@/components/ui/autocomplete-text-field";
 import { LoadingPanel } from "@/components/ui/loading-panel";
 import { Button } from "@/components/ui/button";
 import { TextField } from "@/components/ui/field";
 import { getProfileRequest, saveProfileRequest } from "@/lib/api/candidate";
+import { CITY_SUGGESTIONS } from "@/lib/city-suggestions";
 
 export function ProfileForm() {
   const queryClient = useQueryClient();
@@ -54,7 +56,7 @@ export function ProfileForm() {
         <h2 className="text-lg font-semibold md:col-span-2">Personal information</h2>
         <TextField name="fullName" label="Full name" autoComplete="name" defaultValue={data.fullName} required />
         <TextField name="phone" label="Phone" type="tel" autoComplete="tel" defaultValue={data.phone} />
-        <TextField name="location" label="Location" defaultValue={data.location} />
+        <AutocompleteTextField name="location" label="Location" defaultValue={data.location} suggestions={CITY_SUGGESTIONS} />
         <p className="text-sm text-ink-secondary md:col-span-2">Email: {data.email}</p>
       </section>
       <section className="grid gap-5 md:grid-cols-2">

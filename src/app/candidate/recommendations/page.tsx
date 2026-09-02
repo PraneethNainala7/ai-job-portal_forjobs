@@ -7,7 +7,7 @@ export default function RecommendationsPage() {
       <PageHeader
         crumbs={[{ label: "Candidate", href: "/candidate/dashboard" }, { label: "AI recommendations" }]}
         title="AI recommendations"
-        description="Ranked suggestions based on your profile. Use them as support, not as an automatic apply."
+        description="Curated roles scoring 60% or higher against your resume. Lower matches stay visible in Find jobs with their scores."
       />
       <RecommendationList />
     </>

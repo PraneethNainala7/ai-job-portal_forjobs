@@ -1,0 +1,7 @@
+Hello {{userName}},
+
+Your candidate account access has been restored on AI Job Portal.
+
+You can browse jobs, manage your profile and resume, and apply for roles again.
+
+Open your dashboard: {{dashboardUrl}}

@@ -12,30 +12,39 @@ export function ResumePanel() {
   const { data, isLoading } = useQuery({ queryKey: ["resume"], queryFn: getResumeRequest });
   const [error, setError] = useState("");
   const [phase, setPhase] = useState<"idle" | "uploading" | "processing">("idle");
+  const handleAnalyzeResult = (result: { resume: { status: string; error?: string | null } }) => {
+    if (result.resume.status === "FAILED") {
+      setError(result.resume.error ?? "AI analysis failed.");
+    } else {
+      setError("");
+    }
+    void queryClient.invalidateQueries({ queryKey: ["resume"] });
+    void queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+  };
+
   const mutation = useMutation({
     mutationFn: async (file: File) => {
+      setError("");
       setPhase("uploading");
       await uploadResumeRequest(file);
+      await queryClient.invalidateQueries({ queryKey: ["resume"] });
       setPhase("processing");
       return analyzeResumeRequest();
     },
-    onSuccess: () => {
-      setError("");
+    onSuccess: (result) => {
       setPhase("idle");
-      void queryClient.invalidateQueries({ queryKey: ["resume"] });
-      void queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+      handleAnalyzeResult(result);
     },
     onError: (err: Error) => {
       setError(err.message);
       setPhase("idle");
+      void queryClient.invalidateQueries({ queryKey: ["resume"] });
     },
   });
   const reanalyze = useMutation({
     mutationFn: analyzeResumeRequest,
-    onSuccess: () => {
-      setError("");
-      void queryClient.invalidateQueries({ queryKey: ["resume"] });
-      void queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+    onSuccess: (result) => {
+      handleAnalyzeResult(result);
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -86,15 +95,31 @@ export function ResumePanel() {
           </p>
         ) : null}
       </section>
-      {resume?.status === "FAILED" ? (
+      {resume?.status === "PROCESSING" && phase === "idle" ? (
         <AiPanel label="AI profile">
-          <p className="mt-3 text-sm text-danger">{resume.error ?? "AI analysis failed."}</p>
+          <p className="mt-3 text-sm text-ink-secondary">
+            Resume uploaded. Run AI analysis to extract skills and experience from your file.
+          </p>
           <button
             type="button"
             className="mt-4 h-11 rounded-[var(--radius-control)] border border-ai-border px-4 text-sm font-semibold text-ai"
             onClick={() => reanalyze.mutate()}
+            disabled={reanalyze.isPending}
           >
-            Retry analysis
+            {reanalyze.isPending ? "Analyzing..." : "Run AI analysis"}
+          </button>
+        </AiPanel>
+      ) : null}
+      {resume?.status === "FAILED" ? (
+        <AiPanel label="AI profile">
+          <p className="mt-3 text-sm text-danger">{resume.error ?? error ?? "AI analysis failed."}</p>
+          <button
+            type="button"
+            className="mt-4 h-11 rounded-[var(--radius-control)] border border-ai-border px-4 text-sm font-semibold text-ai"
+            onClick={() => reanalyze.mutate()}
+            disabled={reanalyze.isPending}
+          >
+            {reanalyze.isPending ? "Analyzing..." : "Retry analysis"}
           </button>
         </AiPanel>
       ) : null}

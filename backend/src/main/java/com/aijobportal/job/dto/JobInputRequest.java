@@ -12,8 +12,9 @@ public record JobInputRequest(
         String role,
         @NotBlank(message = "Experience is required.")
         String experience,
-        @NotEmpty(message = "Add at least one skill.")
-        List<@NotBlank(message = "Add at least one skill.") String> skills,
+        List<String> skills,
+        @NotEmpty(message = "Add at least one critical skill.")
+        List<@NotBlank(message = "Add at least one critical skill.") String> criticalSkills,
         List<String> preferredSkills,
         @NotBlank(message = "Location is required.")
         String location,

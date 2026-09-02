@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AiPanel } from "@/components/ai/ai-panel";
 import { AiLoadingContent } from "@/components/ui/loading-panel";
+import { MatchBreakdownPanel } from "@/features/candidate/components/match-breakdown-panel";
 import { matchRequest } from "@/lib/api/candidate";
 
 export function MatchPanel({ jobId }: { jobId: string }) {
@@ -34,15 +35,7 @@ export function MatchPanel({ jobId }: { jobId: string }) {
     <AiPanel label="AI match analysis">
       <p className="mt-2 font-mono text-3xl font-semibold tabular-nums tracking-tight">{data.matchScore}%</p>
       <p className="mt-2 text-sm text-ink-secondary">Decision support only. This is not a hiring decision.</p>
-      <h3 className="mt-4 text-sm font-semibold">Strengths</h3>
-      <ul className="mt-1 space-y-1 text-sm text-ink-secondary">
-        {data.strongAreas.length ? data.strongAreas.map((item) => <li key={item}>✓ {item}</li>) : <li>None identified yet</li>}
-      </ul>
-      <h3 className="mt-4 text-sm font-semibold">Skill gaps</h3>
-      <ul className="mt-1 space-y-1 text-sm text-ink-secondary">
-        {data.gaps.length ? data.gaps.map((item) => <li key={item}>○ {item}</li>) : <li>No required-skill gaps</li>}
-      </ul>
-      {data.explanation ? <p className="mt-4 text-sm leading-6 text-ink-secondary">{data.explanation}</p> : null}
+      <MatchBreakdownPanel match={data} />
       {isFetching ? <AiLoadingContent message="Refreshing..." className="mt-3" /> : null}
     </AiPanel>
   );

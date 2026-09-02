@@ -48,6 +48,10 @@ public class Job {
     private List<String> skills = new ArrayList<>();
 
     @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "critical_skills", nullable = false)
+    private List<String> criticalSkills = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "preferred_skills")
     private List<String> preferredSkills;
 
@@ -148,6 +152,14 @@ public class Job {
 
     public void setSkills(List<String> skills) {
         this.skills = skills;
+    }
+
+    public List<String> getCriticalSkills() {
+        return criticalSkills;
+    }
+
+    public void setCriticalSkills(List<String> criticalSkills) {
+        this.criticalSkills = criticalSkills;
     }
 
     public List<String> getPreferredSkills() {

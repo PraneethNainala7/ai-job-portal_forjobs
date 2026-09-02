@@ -23,10 +23,16 @@ import java.io.IOException;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final LiveAccountStatusFilter liveAccountStatusFilter;
     private final ObjectMapper objectMapper;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter, ObjectMapper objectMapper) {
+    public SecurityConfig(
+            JwtAuthFilter jwtAuthFilter,
+            LiveAccountStatusFilter liveAccountStatusFilter,
+            ObjectMapper objectMapper
+    ) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.liveAccountStatusFilter = liveAccountStatusFilter;
         this.objectMapper = objectMapper;
     }
 
@@ -42,7 +48,8 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/session", "/api/auth/logout").permitAll()
+                        .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/google", "/api/auth/google-config", "/api/auth/session", "/api/auth/logout",
+                                "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/jobs", "/api/jobs/*").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/candidate/**").hasRole("CANDIDATE")
@@ -52,7 +59,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/ai/**").hasRole("CANDIDATE")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(liveAccountStatusFilter, JwtAuthFilter.class);
         return http.build();
     }
 

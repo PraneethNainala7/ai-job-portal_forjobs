@@ -1,9 +1,9 @@
 package com.aijobportal.ai.client;
 
 import com.aijobportal.ai.dto.InterviewQuestionsResponse;
-import com.aijobportal.ai.dto.MatchResultResponse;
 import com.aijobportal.candidate.dto.CandidateProfileResponse;
 import com.aijobportal.candidate.dto.ResumeAnalysisResponse;
+import com.aijobportal.candidate.mapper.CandidateMapper;
 import com.aijobportal.common.domain.ResumeStatus;
 import com.aijobportal.job.entity.Job;
 import com.anthropic.client.AnthropicClient;
@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,7 @@ public class ClaudeAiClient implements AiClient {
     }
 
     @Override
-    public ResumeAnalysisResponse analyzeResume(
+    public ResumeAnalysisOutcome analyzeResume(
             CandidateProfileResponse profile,
             ResumeAnalysisResponse current,
             String resumeText
@@ -59,45 +60,24 @@ public class ClaudeAiClient implements AiClient {
                   "seniority": "string",
                   "technologies": ["string"],
                   "projects": ["string"],
-                  "industries": ["string"]
+                  "industries": ["string"],
+                  "programmingLanguages": ["string"],
+                  "frameworks": ["string"],
+                  "databases": ["string"],
+                  "cloudTechnologies": ["string"],
+                  "tools": ["string"],
+                  "experienceYears": { "total": 0, "backend": 0, "frontend": 0 }
                 }
-                Use empty arrays or empty strings when unknown. Do not invent employers or degrees that are not in the text.
+                Use empty arrays, empty strings, or zero for unknown values.
+                Do not invent employers or degrees that are not in the text.
+                Do not list Java if the resume only mentions JavaScript. Treat Java and JavaScript as different skills.
+                Only include skills with evidence in the resume text.
                 """,
                 "Resume text:\n" + resumeText
         );
-        return parseAnalysis(raw, current);
-    }
-
-    @Override
-    public MatchResultResponse scoreJob(Job job, CandidateProfileResponse profile) {
-        return heuristic.scoreJob(job, profile);
-    }
-
-    @Override
-    public List<MatchResultResponse> rankJobs(CandidateProfileResponse profile, List<Job> jobs) {
-        if (jobs == null || jobs.isEmpty()) {
-            return List.of();
-        }
-        String raw = complete(
-                """
-                Rank the candidate against the supplied jobs. Return JSON only:
-                {
-                  "matches": [
-                    {
-                      "jobId": "string",
-                      "matchScore": 0,
-                      "strongAreas": ["string"],
-                      "gaps": ["string"],
-                      "explanation": "string"
-                    }
-                  ]
-                }
-                Include every jobId exactly once. matchScore is an integer from 0 to 98.
-                explanation is brief decision support, not a hiring decision.
-                """,
-                "Candidate:\n" + profileJson(profile) + "\n\nJobs:\n" + jobsJson(jobs)
-        );
-        return parseRankings(raw, profile, jobs);
+        JsonNode root = readJson(objectMapper, raw);
+        ResumeAnalysisResponse response = parseAnalysis(root, current);
+        return new ResumeAnalysisOutcome(response, parsedData(root, response));
     }
 
     @Override
@@ -106,7 +86,10 @@ public class ClaudeAiClient implements AiClient {
     }
 
     static ResumeAnalysisResponse parseAnalysis(ObjectMapper mapper, String raw, ResumeAnalysisResponse current) {
-        JsonNode root = readJson(mapper, raw);
+        return parseAnalysis(readJson(mapper, raw), current);
+    }
+
+    static ResumeAnalysisResponse parseAnalysis(JsonNode root, ResumeAnalysisResponse current) {
         return new ResumeAnalysisResponse(
                 ResumeStatus.COMPLETE.name(),
                 current == null ? null : current.fileName(),
@@ -125,47 +108,15 @@ public class ClaudeAiClient implements AiClient {
         );
     }
 
-    static List<MatchResultResponse> parseRankings(
-            ObjectMapper mapper,
-            String raw,
-            CandidateProfileResponse profile,
-            List<Job> jobs
-    ) {
-        JsonNode root = readJson(mapper, raw);
-        JsonNode matches = root.path("matches");
-        Map<String, MatchResultResponse> byId = new LinkedHashMap<>();
-        if (matches.isArray()) {
-            for (JsonNode item : matches) {
-                String jobId = text(item, "jobId");
-                if (jobId == null) {
-                    continue;
-                }
-                byId.put(jobId, new MatchResultResponse(
-                        jobId,
-                        profile == null ? "guest" : profile.id(),
-                        clampScore(item.path("matchScore").asInt(0)),
-                        strings(item, "strongAreas"),
-                        strings(item, "gaps"),
-                        text(item, "explanation")
-                ));
-            }
-        }
-        List<MatchResultResponse> ordered = new ArrayList<>();
-        for (Job job : jobs) {
-            MatchResultResponse match = byId.get(job.getId());
-            if (match != null) {
-                ordered.add(match);
-            }
-        }
-        return ordered;
-    }
-
-    ResumeAnalysisResponse parseAnalysis(String raw, ResumeAnalysisResponse current) {
-        return parseAnalysis(objectMapper, raw, current);
-    }
-
-    List<MatchResultResponse> parseRankings(String raw, CandidateProfileResponse profile, List<Job> jobs) {
-        return parseRankings(objectMapper, raw, profile, jobs);
+    static Map<String, Object> parsedData(JsonNode root, ResumeAnalysisResponse response) {
+        Map<String, Object> data = new LinkedHashMap<>(CandidateMapper.toParsedData(response));
+        data.put("programmingLanguages", strings(root, "programmingLanguages"));
+        data.put("frameworks", strings(root, "frameworks"));
+        data.put("databases", strings(root, "databases"));
+        data.put("cloudTechnologies", strings(root, "cloudTechnologies"));
+        data.put("tools", strings(root, "tools"));
+        data.put("experienceYears", experienceYears(root));
+        return data;
     }
 
     private String complete(String system, String user) {
@@ -185,44 +136,6 @@ public class ClaudeAiClient implements AiClient {
         }
         log.info("Claude completed a request using model {}", model);
         return text;
-    }
-
-    private String profileJson(CandidateProfileResponse profile) {
-        try {
-            return objectMapper.writeValueAsString(Map.of(
-                    "id", profile.id(),
-                    "title", nullToEmpty(profile.title()),
-                    "experience", nullToEmpty(profile.experience()),
-                    "location", nullToEmpty(profile.location()),
-                    "skills", profile.skills() == null ? List.of() : profile.skills(),
-                    "education", profile.education() == null ? List.of() : profile.education()
-            ));
-        } catch (Exception ex) {
-            throw new IllegalStateException("Could not serialize candidate profile.", ex);
-        }
-    }
-
-    private String jobsJson(List<Job> jobs) {
-        List<Map<String, Object>> payload = new ArrayList<>();
-        for (Job job : jobs) {
-            String description = job.getDescription() == null ? "" : job.getDescription();
-            if (description.length() > 280) {
-                description = description.substring(0, 280);
-            }
-            payload.add(Map.of(
-                    "jobId", job.getId(),
-                    "role", nullToEmpty(job.getRole()),
-                    "skills", job.getSkills() == null ? List.of() : job.getSkills(),
-                    "location", nullToEmpty(job.getLocation()),
-                    "experience", nullToEmpty(job.getExperience()),
-                    "description", description
-            ));
-        }
-        try {
-            return objectMapper.writeValueAsString(payload);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Could not serialize jobs.", ex);
-        }
     }
 
     static JsonNode readJson(ObjectMapper mapper, String raw) {
@@ -259,11 +172,18 @@ public class ClaudeAiClient implements AiClient {
         return value.isBlank() ? null : value;
     }
 
-    private static int clampScore(int score) {
-        return Math.max(0, Math.min(98, score));
-    }
-
-    private static String nullToEmpty(String value) {
-        return value == null ? "" : value;
+    private static Map<String, Integer> experienceYears(JsonNode root) {
+        JsonNode node = root.path("experienceYears");
+        if (!node.isObject()) {
+            return Map.of();
+        }
+        Map<String, Integer> values = new HashMap<>();
+        node.fields().forEachRemaining(entry -> {
+            int years = entry.getValue().asInt(0);
+            if (years > 0) {
+                values.put(entry.getKey(), years);
+            }
+        });
+        return values;
     }
 }

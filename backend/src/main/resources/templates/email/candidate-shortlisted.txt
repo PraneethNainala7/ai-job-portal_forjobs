@@ -1,0 +1,7 @@
+Hello {{userName}},
+
+There is an update on your application for {{jobTitle}} at {{companyName}}.
+
+Your application has been shortlisted. The employer may contact you with next steps.
+
+View your applications: {{applicationsUrl}}

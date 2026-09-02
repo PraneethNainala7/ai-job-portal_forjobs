@@ -1,7 +1,7 @@
 package com.aijobportal.application.service;
 
-import com.aijobportal.ai.client.AiClient;
 import com.aijobportal.ai.dto.MatchResultResponse;
+import com.aijobportal.ai.matching.MatchAnalysisService;
 import com.aijobportal.application.entity.JobApplication;
 import com.aijobportal.application.repository.JobApplicationRepository;
 import com.aijobportal.auth.entity.User;
@@ -25,6 +25,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.nio.file.Files;
@@ -62,7 +63,9 @@ class ApplicationServiceTest {
     @Mock
     private CandidateProfileRepository profileRepository;
     @Mock
-    private AiClient aiClient;
+    private MatchAnalysisService matchAnalysisService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private ApplicationService service;
     private AuthPrincipal candidatePrincipal;
@@ -79,8 +82,9 @@ class ApplicationServiceTest {
                 userRepository,
                 resumeRepository,
                 profileRepository,
-                aiClient,
-                tempDir.toString()
+                matchAnalysisService,
+                tempDir.toString(),
+                eventPublisher
         );
         candidate = user("candidate-1", Role.CANDIDATE);
         employer = user("employer-1", Role.EMPLOYER);
@@ -95,14 +99,14 @@ class ApplicationServiceTest {
         Files.writeString(source, "resume bytes");
 
         Resume resume = completeResume(source);
-        when(jobRepository.findById("job-1")).thenReturn(Optional.of(job));
+        when(jobRepository.findDetailedById("job-1")).thenReturn(Optional.of(job));
         when(applicationRepository.existsByJobIdAndCandidateId("job-1", candidate.getId())).thenReturn(false);
         when(userRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
         when(resumeRepository.findByCandidateId(candidate.getId())).thenReturn(Optional.of(resume));
         when(profileRepository.findByUserId(candidate.getId())).thenReturn(Optional.empty());
-        when(aiClient.rankJobs(any(), eq(List.of(job)))).thenReturn(List.of(
+        when(matchAnalysisService.analyze(eq(job), any(), eq(resume))).thenReturn(
                 new MatchResultResponse("job-1", candidate.getId(), 82, List.of("Java"), List.of("Kubernetes"), "Strong fit")
-        ));
+        );
         when(applicationRepository.save(any())).thenAnswer(invocation -> {
             JobApplication app = invocation.getArgument(0);
             if (app.getAppliedAt() == null) {
@@ -132,7 +136,7 @@ class ApplicationServiceTest {
         resume.setFileUrl(tempDir.resolve("resume.pdf").toString());
         resume.setParsedData(Map.of("skills", List.of("Java")));
 
-        when(jobRepository.findById("job-1")).thenReturn(Optional.of(job));
+        when(jobRepository.findDetailedById("job-1")).thenReturn(Optional.of(job));
         when(applicationRepository.existsByJobIdAndCandidateId("job-1", candidate.getId())).thenReturn(false);
         when(userRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
         when(resumeRepository.findByCandidateId(candidate.getId())).thenReturn(Optional.of(resume));
@@ -140,25 +144,35 @@ class ApplicationServiceTest {
         ApiException ex = assertThrows(ApiException.class, () -> service.apply(candidatePrincipal, "job-1"));
         assertEquals(400, ex.getStatus().value());
         verify(applicationRepository, never()).save(any());
-        verify(aiClient, never()).rankJobs(any(), any());
+        verify(matchAnalysisService, never()).analyze(any(), any(), any());
     }
 
     @Test
-    void applyRejectsWhenRankJobsReturnsEmpty() throws Exception {
+    void applyAlwaysScoresWithDeterministicMatcher() throws Exception {
         Path source = tempDir.resolve("candidate-resume.pdf");
         Files.writeString(source, "resume bytes");
         Resume resume = completeResume(source);
 
-        when(jobRepository.findById("job-1")).thenReturn(Optional.of(job));
+        when(jobRepository.findDetailedById("job-1")).thenReturn(Optional.of(job));
         when(applicationRepository.existsByJobIdAndCandidateId("job-1", candidate.getId())).thenReturn(false);
         when(userRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
         when(resumeRepository.findByCandidateId(candidate.getId())).thenReturn(Optional.of(resume));
         when(profileRepository.findByUserId(candidate.getId())).thenReturn(Optional.empty());
-        when(aiClient.rankJobs(any(), eq(List.of(job)))).thenReturn(List.of());
+        when(matchAnalysisService.analyze(eq(job), any(), eq(resume))).thenReturn(
+                new MatchResultResponse("job-1", candidate.getId(), 82, List.of("Java"), List.of(), "Fit")
+        );
+        when(applicationRepository.save(any())).thenAnswer(invocation -> {
+            JobApplication app = invocation.getArgument(0);
+            if (app.getAppliedAt() == null) {
+                app.setAppliedAt(Instant.now());
+            }
+            return app;
+        });
 
-        ApiException ex = assertThrows(ApiException.class, () -> service.apply(candidatePrincipal, "job-1"));
-        assertEquals(400, ex.getStatus().value());
-        verify(applicationRepository, never()).save(any());
+        service.apply(candidatePrincipal, "job-1");
+
+        verify(matchAnalysisService).analyze(eq(job), any(), eq(resume));
+        verify(applicationRepository).save(any());
     }
 
     @Test
@@ -195,15 +209,15 @@ class ApplicationServiceTest {
         Files.writeString(source, "resume bytes");
         Resume resume = completeResume(source);
 
-        when(jobRepository.findById("job-1")).thenReturn(Optional.of(job));
+        when(jobRepository.findDetailedById("job-1")).thenReturn(Optional.of(job));
         when(applicationRepository.existsByJobIdAndCandidateId("job-1", candidate.getId()))
                 .thenReturn(false, true);
         when(userRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
         when(resumeRepository.findByCandidateId(candidate.getId())).thenReturn(Optional.of(resume));
         when(profileRepository.findByUserId(candidate.getId())).thenReturn(Optional.empty());
-        when(aiClient.rankJobs(any(), eq(List.of(job)))).thenReturn(List.of(
+        when(matchAnalysisService.analyze(eq(job), any(), eq(resume))).thenReturn(
                 new MatchResultResponse("job-1", candidate.getId(), 82, List.of("Java"), List.of(), "Fit")
-        ));
+        );
 
         ApiException ex = assertThrows(ApiException.class, () -> service.apply(candidatePrincipal, "job-1"));
         assertEquals(400, ex.getStatus().value());
@@ -217,20 +231,31 @@ class ApplicationServiceTest {
         Files.writeString(source, "resume bytes");
         Resume resume = completeResume(source);
 
-        when(jobRepository.findById("job-1")).thenReturn(Optional.of(job));
+        when(jobRepository.findDetailedById("job-1")).thenReturn(Optional.of(job));
         when(applicationRepository.existsByJobIdAndCandidateId("job-1", candidate.getId())).thenReturn(false);
         when(userRepository.findById(candidate.getId())).thenReturn(Optional.of(candidate));
         when(resumeRepository.findByCandidateId(candidate.getId())).thenReturn(Optional.of(resume));
         when(profileRepository.findByUserId(candidate.getId())).thenReturn(Optional.empty());
-        when(aiClient.rankJobs(any(), eq(List.of(job)))).thenReturn(List.of(
+        when(matchAnalysisService.analyze(eq(job), any(), eq(resume))).thenReturn(
                 new MatchResultResponse("job-1", candidate.getId(), 82, List.of("Java"), List.of(), "Fit")
-        ));
+        );
         doThrow(new DataIntegrityViolationException("duplicate key (job_id, candidate_id)"))
                 .when(applicationRepository).save(any());
 
         ApiException ex = assertThrows(ApiException.class, () -> service.apply(candidatePrincipal, "job-1"));
         assertEquals(400, ex.getStatus().value());
         assertEquals("You have already applied to this job.", ex.getMessage());
+    }
+
+    @Test
+    void applyRejectsWhenEmployerOnHold() {
+        employer.setAccountStatus(AccountStatus.ON_HOLD);
+        job.setEmployer(employer);
+        when(jobRepository.findDetailedById("job-1")).thenReturn(Optional.of(job));
+
+        ApiException ex = assertThrows(ApiException.class, () -> service.apply(candidatePrincipal, "job-1"));
+        assertEquals(400, ex.getStatus().value());
+        verify(applicationRepository, never()).save(any());
     }
 
     @Test

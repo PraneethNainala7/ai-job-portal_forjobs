@@ -1,0 +1,10 @@
+Hello {{userName}},
+
+Your employer account for {{companyName}} has been placed on hold.
+
+Reason:
+{{reason}}
+
+Employer features such as posting jobs and managing applicants are temporarily restricted until your account is restored.
+
+If you believe this is a mistake, contact the platform administrator.

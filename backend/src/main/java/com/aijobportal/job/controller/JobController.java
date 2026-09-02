@@ -46,6 +46,6 @@ public class JobController {
 
     @GetMapping("/{id}")
     public JobResponse get(@PathVariable String id) {
-        return JobMapper.toJob(jobCommandService.requireJob(id));
+        return JobMapper.toJob(jobCommandService.requirePublicJob(id));
     }
 }

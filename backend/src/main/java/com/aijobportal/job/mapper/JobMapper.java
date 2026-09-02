@@ -22,12 +22,14 @@ public final class JobMapper {
             String employerName
     ) {
         List<String> preferred = job.getPreferredSkills();
+        List<String> critical = job.getCriticalSkills();
         return new JobResponse(
                 job.getId(),
                 job.getRole(),
                 job.getCompanyName(),
                 job.getExperience(),
                 job.getSkills(),
+                critical == null || critical.isEmpty() ? null : critical,
                 preferred == null || preferred.isEmpty() ? null : preferred,
                 job.getLocation(),
                 job.getSalary(),
@@ -46,7 +48,7 @@ public final class JobMapper {
 
     public static JobResponse withMatch(JobResponse job, int matchScore) {
         return new JobResponse(
-                job.id(), job.role(), job.companyName(), job.experience(), job.skills(), job.preferredSkills(),
+                job.id(), job.role(), job.companyName(), job.experience(), job.skills(), job.criticalSkills(), job.preferredSkills(),
                 job.location(), job.salary(), job.jobType(), job.workMode(), job.description(), job.status(),
                 job.postedDate(), job.employerId(), matchScore, job.applicantCount(), job.shortlistedCount(), job.employerName()
         );

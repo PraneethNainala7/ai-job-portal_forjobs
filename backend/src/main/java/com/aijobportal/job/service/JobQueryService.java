@@ -1,6 +1,7 @@
 package com.aijobportal.job.service;
 
 import com.aijobportal.application.repository.JobApplicationRepository;
+import com.aijobportal.common.domain.AccountStatus;
 import com.aijobportal.common.domain.ApplicationStatus;
 import com.aijobportal.common.domain.JobStatus;
 import com.aijobportal.job.dto.JobListResponse;
@@ -39,12 +40,21 @@ public class JobQueryService {
     ) {
         int safePage = Math.max(1, page);
         int safeSize = Math.min(20, Math.max(1, pageSize <= 0 ? 6 : pageSize));
-        List<Job> filtered = jobRepository.findByStatusOrderByPostedDateDesc(JobStatus.ACTIVE).stream()
+        List<Job> filtered = jobRepository
+                .findPublicActiveJobsOrderByPostedDateDesc(JobStatus.ACTIVE, AccountStatus.ACTIVE)
+                .stream()
                 .filter(job -> matches(job, search, role, skills, location, experience, salary, jobType))
                 .toList();
         int start = (safePage - 1) * safeSize;
         List<JobResponse> items = filtered.stream().skip(start).limit(safeSize).map(JobMapper::toJob).toList();
         return new JobListResponse(items, filtered.size(), safePage, safeSize);
+    }
+
+    @Transactional(readOnly = true)
+    public List<JobResponse> listAllActive() {
+        return jobRepository.findPublicActiveJobsOrderByPostedDateDesc(JobStatus.ACTIVE, AccountStatus.ACTIVE).stream()
+                .map(JobMapper::toJob)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -92,7 +102,10 @@ public class JobQueryService {
             String jobType
     ) {
         String haystack = (job.getRole() + " " + job.getCompanyName() + " " + job.getDescription() + " "
-                + String.join(" ", job.getSkills())).toLowerCase(Locale.ROOT);
+                + String.join(" ", job.getCriticalSkills()) + " "
+                + String.join(" ", job.getSkills()) + " "
+                + String.join(" ", job.getPreferredSkills() == null ? List.of() : job.getPreferredSkills()))
+                .toLowerCase(Locale.ROOT);
         if (has(search) && !haystack.contains(search.toLowerCase(Locale.ROOT))) {
             return false;
         }
@@ -111,8 +124,17 @@ public class JobQueryService {
         if (has(salary) && !job.getSalary().toLowerCase(Locale.ROOT).contains(salary.toLowerCase(Locale.ROOT))) {
             return false;
         }
-        return !has(skills) || job.getSkills().stream()
+        return !has(skills) || allSkills(job).stream()
                 .anyMatch(skill -> skill.toLowerCase(Locale.ROOT).contains(skills.toLowerCase(Locale.ROOT)));
+    }
+
+    private static List<String> allSkills(Job job) {
+        List<String> combined = new java.util.ArrayList<>(job.getCriticalSkills());
+        combined.addAll(job.getSkills());
+        if (job.getPreferredSkills() != null) {
+            combined.addAll(job.getPreferredSkills());
+        }
+        return combined;
     }
 
     private static boolean has(String value) {

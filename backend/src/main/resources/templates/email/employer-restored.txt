@@ -1,0 +1,7 @@
+Hello {{userName}},
+
+Access for {{companyName}} has been restored on AI Job Portal.
+
+You can again use employer features, including posting jobs and reviewing applicants.
+
+Open your dashboard: {{dashboardUrl}}

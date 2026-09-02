@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { controlClass } from "@/components/ui/control-styles";
 import { TextField } from "@/components/ui/field";
 import { SelectMenu } from "@/components/ui/select-menu";
+import { locationFilterOptions, resolveLocationFilter } from "@/lib/city-suggestions";
 import { cn } from "@/lib/utils";
 
 const jobTypes = [
@@ -27,10 +28,11 @@ const jobTypes = [
 
 const locations = [
   { value: "", label: "Any location", icon: ListDashesIcon },
-  { value: "Bengaluru", label: "Bengaluru", icon: MapPinIcon },
-  { value: "Hyderabad", label: "Hyderabad", icon: MapPinIcon },
-  { value: "Pune", label: "Pune", icon: MapPinIcon },
-  { value: "Remote", label: "Remote", icon: HouseIcon },
+  ...locationFilterOptions().map(({ value, label }) => ({
+    value,
+    label,
+    icon: value === "Remote" ? HouseIcon : MapPinIcon,
+  })),
 ];
 
 type FilterState = {
@@ -60,7 +62,7 @@ export function JobFilters({ basePath = "/jobs" }: { basePath?: string }) {
     () => ({
       search: params.get("search") ?? "",
       role: params.get("role") ?? "",
-      location: params.get("location") ?? "",
+      location: resolveLocationFilter(params.get("location") ?? ""),
       skills: params.get("skills") ?? "",
       experience: params.get("experience") ?? "",
       salary: params.get("salary") ?? "",
@@ -74,7 +76,10 @@ export function JobFilters({ basePath = "/jobs" }: { basePath?: string }) {
 
   const chips = useMemo(() => {
     const items: { key: keyof FilterState; label: string }[] = [];
-    if (filters.location) items.push({ key: "location", label: filters.location });
+    if (filters.location) {
+      const locationLabel = locations.find((option) => option.value === filters.location)?.label ?? filters.location;
+      items.push({ key: "location", label: locationLabel });
+    }
     if (filters.jobType) items.push({ key: "jobType", label: filters.jobType });
     if (filters.role) items.push({ key: "role", label: filters.role });
     if (filters.skills) items.push({ key: "skills", label: filters.skills });
@@ -145,7 +150,7 @@ export function JobFilters({ basePath = "/jobs" }: { basePath?: string }) {
           value={filters.location}
           onValueChange={(location) => commit({ location })}
           options={locations}
-          wrapperClassName="w-full space-y-0 sm:w-44"
+          wrapperClassName="w-full space-y-0 sm:w-52"
         />
         <SelectMenu
           label="Job type"

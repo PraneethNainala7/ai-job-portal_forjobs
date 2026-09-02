@@ -1,10 +1,6 @@
 package com.aijobportal.ai.client;
 
-import com.aijobportal.ai.dto.MatchResultResponse;
-import com.aijobportal.candidate.dto.CandidateProfileResponse;
 import com.aijobportal.candidate.dto.ResumeAnalysisResponse;
-import com.aijobportal.common.domain.JobStatus;
-import com.aijobportal.job.entity.Job;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -45,46 +41,5 @@ class ClaudeAiClientTest {
         assertEquals(List.of("Java", "Spring"), result.skills());
         assertEquals("4 years", result.experience());
         assertEquals(List.of("PostgreSQL"), result.technologies());
-    }
-
-    @Test
-    void mapsRankingsAndDropsOmittedJobs() {
-        CandidateProfileResponse profile = new CandidateProfileResponse(
-                "cand-1", "Ada", "ada@example.com", null, "Bengaluru", "Backend Engineer",
-                "4 years", List.of("Java"), List.of(), List.of(), null, null
-        );
-        Job ranked = job("job-1", "Backend Engineer", List.of("Java"));
-        Job missing = job("job-2", "Frontend Engineer", List.of("React"));
-        String raw = """
-                {
-                  "matches": [
-                    {
-                      "jobId": "job-1",
-                      "matchScore": 120,
-                      "strongAreas": ["Java"],
-                      "gaps": [],
-                      "explanation": "Strong backend overlap."
-                    }
-                  ]
-                }
-                """;
-        List<MatchResultResponse> matches = ClaudeAiClient.parseRankings(
-                mapper, raw, profile, List.of(ranked, missing)
-        );
-        assertEquals(1, matches.size());
-        assertEquals("job-1", matches.getFirst().jobId());
-        assertEquals(98, matches.getFirst().matchScore());
-    }
-
-    private static Job job(String id, String role, List<String> skills) {
-        Job job = new Job();
-        job.setId(id);
-        job.setRole(role);
-        job.setSkills(skills);
-        job.setLocation("Bengaluru, India");
-        job.setExperience("3+ years");
-        job.setStatus(JobStatus.ACTIVE);
-        job.setDescription("Build product features.");
-        return job;
     }
 }

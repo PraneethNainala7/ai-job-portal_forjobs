@@ -6,10 +6,15 @@ export const registerSchema = z
     name: z.string().trim().min(2, "Name is required."),
     email: z.string().email("Enter a valid email."),
     password: z.string().min(8, "Use at least 8 characters."),
+    confirmPassword: z.string().min(1, "Confirm your password."),
     companyName: z.string().optional(),
     companyInformation: z.string().optional(),
     companyLocation: z.string().optional(),
     cin: z.string().optional(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
   })
   .superRefine((value, context) => {
     if (value.role !== "EMPLOYER") return;

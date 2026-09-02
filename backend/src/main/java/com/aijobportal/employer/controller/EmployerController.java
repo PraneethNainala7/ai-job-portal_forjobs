@@ -11,6 +11,7 @@ import com.aijobportal.config.security.SecurityUtils;
 import com.aijobportal.employer.dto.CompanyUpdateRequest;
 import com.aijobportal.employer.dto.EmployerApplicantItemsResponse;
 import com.aijobportal.employer.dto.EmployerDashboardResponse;
+import com.aijobportal.employer.dto.EmployerOnboardingRequest;
 import com.aijobportal.employer.repository.CompanyRepository;
 import com.aijobportal.employer.service.EmployerService;
 import com.aijobportal.job.dto.JobInputRequest;
@@ -73,6 +74,14 @@ public class EmployerController {
     @PutMapping("/profile")
     public UserResponse updateProfile(@RequestBody CompanyUpdateRequest request, HttpServletResponse response) {
         UserResponse updated = employerService.updateProfile(SecurityUtils.requireUser(), request);
+        refreshCookie(response, updated.id());
+        return updated;
+    }
+
+    @PostMapping("/onboarding")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponse completeOnboarding(@Valid @RequestBody EmployerOnboardingRequest request, HttpServletResponse response) {
+        UserResponse updated = employerService.completeOnboarding(SecurityUtils.requireUser(), request);
         refreshCookie(response, updated.id());
         return updated;
     }

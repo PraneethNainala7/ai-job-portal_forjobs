@@ -5,6 +5,7 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { cardInteractiveClass, chipClass } from "@/components/ui/control-styles";
 import { cn } from "@/lib/utils";
+import { getJobPrimarySkills } from "@/lib/jobs";
 import type { Job } from "@/types/domain";
 
 export function JobCard({
@@ -23,6 +24,7 @@ export function JobCard({
   const initial = job.companyName.trim().charAt(0).toUpperCase() || "J";
   const destination = href ?? `/jobs/${job.id}`;
   const loginNext = encodeURIComponent(destination);
+  const primarySkills = getJobPrimarySkills(job);
 
   return (
     <article className={cn(cardInteractiveClass, "flex h-full flex-col p-5")}>
@@ -66,7 +68,7 @@ export function JobCard({
       <p className="mt-3 line-clamp-2 text-sm leading-6 text-ink-secondary">{job.description}</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {job.skills.slice(0, 3).map((skill) => (
+        {primarySkills.slice(0, 3).map((skill) => (
           <span key={skill} className={chipClass}>
             {skill}
           </span>

@@ -5,11 +5,10 @@ import type {
   Job,
   SessionUser,
 } from "@/types/domain";
+import { parseWorkspaceResponse } from "@/lib/api/parse-response";
 
 async function parse<T>(response: Response): Promise<T> {
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error ?? "Request failed.");
-  return body as T;
+  return parseWorkspaceResponse(response, "employer");
 }
 
 export function getEmployerProfileRequest() {

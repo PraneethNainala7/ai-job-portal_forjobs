@@ -1,6 +1,6 @@
 package com.aijobportal.application.service;
 
-import com.aijobportal.ai.client.AiClient;
+import com.aijobportal.ai.matching.MatchAnalysisService;
 import com.aijobportal.ai.dto.MatchResultResponse;
 import com.aijobportal.application.dto.ApplicationResponse;
 import com.aijobportal.application.dto.ApplicationResumeDownload;
@@ -15,6 +15,7 @@ import com.aijobportal.candidate.entity.Resume;
 import com.aijobportal.candidate.mapper.CandidateMapper;
 import com.aijobportal.candidate.repository.CandidateProfileRepository;
 import com.aijobportal.candidate.repository.ResumeRepository;
+import com.aijobportal.common.domain.AccountStatus;
 import com.aijobportal.common.domain.ApplicationStatus;
 import com.aijobportal.common.domain.JobStatus;
 import com.aijobportal.common.domain.ResumeStatus;
@@ -27,6 +28,10 @@ import com.aijobportal.job.repository.JobRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import com.aijobportal.notification.event.ApplicationSubmittedEvent;
+import com.aijobportal.notification.event.CandidateRejectedEvent;
+import com.aijobportal.notification.event.CandidateShortlistedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,8 +56,9 @@ public class ApplicationService {
     private final UserRepository userRepository;
     private final ResumeRepository resumeRepository;
     private final CandidateProfileRepository profileRepository;
-    private final AiClient aiClient;
+    private final MatchAnalysisService matchAnalysisService;
     private final Path uploadDir;
+    private final ApplicationEventPublisher eventPublisher;
 
     public ApplicationService(
             JobApplicationRepository applicationRepository,
@@ -60,23 +66,28 @@ public class ApplicationService {
             UserRepository userRepository,
             ResumeRepository resumeRepository,
             CandidateProfileRepository profileRepository,
-            AiClient aiClient,
-            @Value("${app.upload-dir}") String uploadDir
+            MatchAnalysisService matchAnalysisService,
+            @Value("${app.upload-dir}") String uploadDir,
+            ApplicationEventPublisher eventPublisher
     ) {
         this.applicationRepository = applicationRepository;
         this.jobRepository = jobRepository;
         this.userRepository = userRepository;
         this.resumeRepository = resumeRepository;
         this.profileRepository = profileRepository;
-        this.aiClient = aiClient;
+        this.matchAnalysisService = matchAnalysisService;
         this.uploadDir = Path.of(uploadDir).toAbsolutePath().normalize();
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
     public ApplicationResponse apply(AuthPrincipal principal, String jobId) {
         AccountStatusRules.requireCandidateActive(principal.role(), principal.accountStatus());
-        Job job = jobRepository.findById(jobId).orElseThrow(() -> ApiException.badRequest("This job is not open."));
+        Job job = jobRepository.findDetailedById(jobId).orElseThrow(() -> ApiException.badRequest("This job is not open."));
         if (job.getStatus() != JobStatus.ACTIVE) {
+            throw ApiException.badRequest("This job is not open.");
+        }
+        if (job.getEmployer() == null || job.getEmployer().getAccountStatus() != AccountStatus.ACTIVE) {
             throw ApiException.badRequest("This job is not open.");
         }
         assertNotAlreadyApplied(jobId, principal.id());
@@ -102,17 +113,7 @@ public class ApplicationService {
         CandidateProfile profile = profileRepository.findByUserId(principal.id()).orElse(null);
         CandidateProfileResponse scoringProfile = scoringProfile(candidate, profile, resume);
 
-        List<MatchResultResponse> ranked;
-        try {
-            ranked = aiClient.rankJobs(scoringProfile, List.of(job));
-        } catch (RuntimeException ex) {
-            log.warn("Apply-time match scoring failed for candidate {} job {}: {}", principal.id(), jobId, ex.getMessage());
-            throw ApiException.badRequest("Match scoring is unavailable. Try again later.");
-        }
-        if (ranked.isEmpty()) {
-            throw ApiException.badRequest("Match scoring is unavailable. Try again later.");
-        }
-        MatchResultResponse match = ranked.getFirst();
+        MatchResultResponse match = matchAnalysisService.analyze(job, scoringProfile, resume);
 
         JobApplication application = new JobApplication();
         application.setId(Ids.next());
@@ -150,6 +151,12 @@ public class ApplicationService {
         } catch (DataIntegrityViolationException ex) {
             throw ApiException.badRequest(ALREADY_APPLIED_MESSAGE);
         }
+        eventPublisher.publishEvent(new ApplicationSubmittedEvent(
+                candidate.getEmail(),
+                candidate.getName(),
+                job.getRole(),
+                job.getCompanyName()
+        ));
         return toResponse(application, false);
     }
 
@@ -171,6 +178,7 @@ public class ApplicationService {
         JobApplication application = requireOwnedApplication(principal, applicationId);
         ApplicationStatusRules.requireCanShortlist(application.getStatus());
         application.setStatus(ApplicationStatus.SHORTLISTED);
+        publishApplicationStatusEvent(application, true);
         return toResponse(application, false);
     }
 
@@ -180,6 +188,7 @@ public class ApplicationService {
         ApplicationStatusRules.requireCanReject(application.getStatus());
         application.setStatus(ApplicationStatus.REJECTED);
         application.setRejectionReason(reason == null || reason.isBlank() ? null : reason.trim());
+        publishApplicationStatusEvent(application, false);
         return toResponse(application, false);
     }
 
@@ -218,6 +227,26 @@ public class ApplicationService {
                 application.getRejectionReason(),
                 includeJob ? JobMapper.toJob(application.getJob()) : null
         );
+    }
+
+    private void publishApplicationStatusEvent(JobApplication application, boolean shortlisted) {
+        User candidate = application.getCandidate();
+        Job job = application.getJob();
+        if (shortlisted) {
+            eventPublisher.publishEvent(new CandidateShortlistedEvent(
+                    candidate.getEmail(),
+                    candidate.getName(),
+                    job.getRole(),
+                    job.getCompanyName()
+            ));
+        } else {
+            eventPublisher.publishEvent(new CandidateRejectedEvent(
+                    candidate.getEmail(),
+                    candidate.getName(),
+                    job.getRole(),
+                    job.getCompanyName()
+            ));
+        }
     }
 
     private void assertNotAlreadyApplied(String jobId, String candidateId) {

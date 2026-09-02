@@ -1,11 +1,9 @@
-import type { ApplicationRecord, CandidateProfile, Job, MatchResult, ResumeAnalysis } from "@/types/domain";
+import type { ApplicationRecord, CandidateProfile, MatchResult, RecommendationResponse, ResumeAnalysis } from "@/types/domain";
+import { parseWorkspaceResponse } from "@/lib/api/parse-response";
 
 async function parse<T>(response: Response): Promise<T> {
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error ?? "Request failed.");
-  return body as T;
+  return parseWorkspaceResponse(response, "candidate");
 }
-
 export function getProfileRequest() {
   return fetch("/api/candidate/profile").then((response) => parse<CandidateProfile>(response));
 }
@@ -46,7 +44,7 @@ export function applyRequest(jobId: string) {
 
 export function recommendRequest() {
   return fetch("/api/ai/jobs/recommend", { method: "POST" }).then((response) =>
-    parse<{ items: Array<{ job: Job; match: MatchResult }> }>(response),
+    parse<RecommendationResponse>(response),
   );
 }
 

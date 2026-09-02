@@ -1,0 +1,9 @@
+Hello {{userName}},
+
+Thank you for your interest in {{jobTitle}} at {{companyName}}.
+
+After review, the employer has decided not to move forward with your application at this time.
+
+We encourage you to continue exploring other open roles on AI Job Portal.
+
+Browse jobs: {{jobsUrl}}

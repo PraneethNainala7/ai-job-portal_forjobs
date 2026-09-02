@@ -6,6 +6,7 @@ import { cardClass, chipClass } from "@/components/ui/control-styles";
 import { getHomePath } from "@/config/routes";
 import { getSession } from "@/lib/auth/session";
 import { fetchPublicJob } from "@/lib/api/server";
+import { getJobPrimarySkills } from "@/lib/jobs";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
   const applyHref = session?.role === "CANDIDATE" && session.accountStatus === "ACTIVE"
     ? `/candidate/jobs/${job.id}`
     : `/login?next=/jobs/${job.id}`;
+  const primarySkills = getJobPrimarySkills(job);
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-canvas">
@@ -41,8 +43,12 @@ export default async function JobDetailPage({ params }: PageProps<"/jobs/[id]">)
           </dl>
           <h2 className="mt-8 text-xl font-semibold">About the role</h2>
           <p className="mt-3 text-sm leading-7 text-ink-secondary">{job.description}</p>
-          <h2 className="mt-8 text-xl font-semibold">Required skills</h2>
-          <SkillList skills={job.skills} />
+          {primarySkills.length ? (
+            <>
+              <h2 className="mt-8 text-xl font-semibold">Skills</h2>
+              <SkillList skills={primarySkills} />
+            </>
+          ) : null}
           {job.preferredSkills?.length ? (
             <>
               <h2 className="mt-8 text-xl font-semibold">Preferred skills</h2>

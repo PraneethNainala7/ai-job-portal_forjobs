@@ -30,7 +30,7 @@ public class AiController {
 
     @PostMapping("/jobs/recommend")
     public RecommendationResponse recommend() {
-        return new RecommendationResponse(aiService.recommend(SecurityUtils.requireUser()).items());
+        return aiService.recommend(SecurityUtils.requireUser());
     }
 
     @PostMapping("/jobs/{id}/match")
