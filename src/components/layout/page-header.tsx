@@ -6,7 +6,7 @@ interface PageHeaderProps {
   description?: string;
 }
 
-export function PageHeader({ crumbs, title, description }: PageHeaderProps) {
+export function PageHeader({ crumbs, title, description }: PageHeaderProps) { role="banner"
   return (
     <header className="mb-8">
       <nav aria-label="Breadcrumb" className="mb-3 text-[13px]">
