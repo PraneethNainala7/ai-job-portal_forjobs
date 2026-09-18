@@ -9,7 +9,7 @@ import type {
 
 async function parse<T>(response: Response): Promise<T> {
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error ?? "Request failed.");
+  if (!response.ok) { log.error('Request failed with status: ' + response.status + ' - ' + body.error); throw new Error(body.error ?? 'Request failed.'); }
   return body as T;
 }
 
