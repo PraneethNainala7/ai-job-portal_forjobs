@@ -102,7 +102,7 @@ export function ChipInput({
       {values.length ? (
         <ul className="mt-3 flex flex-wrap gap-2">
           {values.map((item) => (
-            <li key={item}>
+            <li key={item} role="presentation" aria-hidden="true">
               <button
                 type="button"
                 aria-label={`Remove ${item}`}
