@@ -81,7 +81,7 @@ export function ApplicantDetail({ jobId, applicationId }: { jobId: string; appli
     <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
       <article className="space-y-6 rounded-[var(--radius-card)] border bg-surface p-6">
         <div>
-          <h2 className="text-xl font-semibold">{item.candidate.fullName}</h2>
+          <h2 role="heading" className="text-xl font-semibold">{item.candidate.fullName}</h2>
           <p className="mt-1 text-sm text-ink-secondary">
             {item.candidate.title ?? "Candidate"} · {item.candidate.location ?? "Location not provided"} · {formatStatus(status)}
           </p>
