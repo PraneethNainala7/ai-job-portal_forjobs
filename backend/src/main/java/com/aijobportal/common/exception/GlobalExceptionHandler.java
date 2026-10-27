@@ -76,6 +76,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnknown(Exception ex) {
         log.error("Unhandled error", ex);
+        log.error("Request body: " + ex.getStackTrace());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse("Something went wrong. Try again."));
     }
